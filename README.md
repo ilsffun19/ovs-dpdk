@@ -26,7 +26,8 @@ physical ports with 2 vhost-user interfaces.
 6) To check the OVS PMD core assignment, run check_pmd_cores.sh
 7) To change the OVS PMD core assignment for the dpdk and vhost-user
 interfaces, run set_rxq.sh
-8) The VM images are in ovs-dpdk/vm-images folder. Pls copy the ubuntu-16.04-testpmd.img file to ubuntu-16.04-testpmd1.img 
+8) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
+Create vm-images folder in ovs-dpdk. Pls download the ubuntu-16.04-testpmd.img file to ovs-dpdk/vm-images folder.
 9) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
 10) Run power_on_vm-vhost-user1-2p.sh to power on the VM
 11) Run vncviewer <host address>:1 to access to the VM
@@ -49,7 +50,8 @@ interfaces
 6) To check the OVS PMD core assignment, run check_pmd_cores.sh
 7) To change the OVS PMD core assignment for the dpdk and vhost-user
 interfaces, run set_rxq.sh $interface_name $core_id
-8) The VM images are in ovs-dpdk/vm-images folder. Pls copy the ubuntu-16.04-testpmd.img file to ubuntu-16.04-testpmd1.img and ubuntu-16.04-testpmd2.img
+8) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
+Create vm-images folder in ovs-dpdk. Pls download the ubuntu-16.04-testpmd.img file to ovs-dpdk/vm-images folder. Duplicate another ubuntu-16.04-testpmd.img file and rename to ubuntu-16.04-testpmd2.img.
 9) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
 10) Run power_on_vm-vhost-user1-2p.sh to power on the VM1 and power_on_vm-vhost-user2-2p.sh to power on VM2.
 11) Run vncviewer <host address>:1 and vncviewer <host address>:2 to access to VM1 and VM2
