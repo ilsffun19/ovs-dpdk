@@ -1,0 +1,106 @@
+Steps to run VPP vRouter over OVS-DPDK:
+
+Build and install OVS-DPDK and QEMU as indicated in the OVS-DPDK BKM in github.
+
+cd /root/ovs-dpdk
+./disable_service.sh
+./stop_services.sh
+
+cd vpp-vrouter-ovs
+Check the PCI ID devices you will be using via lspci|grep Ethernet.
+Then edit the start-ovs-dpdk.sh and createports_pvp-4P-4c.sh in vpp-vrouter-ovs folder to include the PCI ID devices you will be using for OVS-DPDK. 
+Edit createports_pvp-4P-4c.sh to include the core mapping for the OVS-DPDK PMD threads on the ports.
+Create a different script file for different core mapping for number of ports and the cores.
+
+Start OVS-DPDK:
+
+cd /root/ovs-dpdk/vpp-vrouter-ovs
+./start-ovs-dpdk.sh
+./set_pmd_thread.sh
+./createports_pvp-4P-4c.sh
+./addroutes_pvp-4P.sh
+
+The VPP vrouter VM image is located in /root/ovs-dpdk/vm-images.
+
+Edit the power_on_vm-vhost-user-4P.sh file to include the path to the vm image and taskset the VM to the proper CPU core you want the VM to run on.
+
+For 4 ports to the VM (4 vhost-user ports per VM), we would create 4 worker threads in VPP (each virtio port to have its own core), and the total number of cores per VM would be 6 vCPUs.
+
+So here is the list of the number of cores per VM to create when we need to run VPP:
+
+2 vhost-user ports: 4 vCPU (2 worker threads)
+4 vhost-user ports: 6 vCPU (4 worker threads)
+6 vhost-user ports: 8 vCPU (6 worker threads)
+8 vhost-user ports: 10 vCPU (8 worker threads)
+
+Each VPP VM would have 8GB memory.
+
+Power on the VM:
+./power_on_vm_vhost-user-4P.sh
+
+YOu can access the VM via your host machine with this command:
+ssh -l root localhost -p 2023
+
+
+Login to the VM with the following credential: root/intel123
+
+
+Check the cat /proc/cmdline to ensure the isolcpus on the isolated cores is correct.
+For 4 vCPU, isolate core 1 - 3
+For 6 vCPU, isolate core 1 - 5
+For 8 vCPU, isolate core 1 - 7
+For 10 vCPU, isolate core 1 - 9
+
+Make changes to the grub command line to isolate the correct cores. The reboot the VM.
+
+In the VM, run the following tuning scripts:
+./disable_service.sh
+./stop_services.sh
+
+Edit and save /etc/vpp/startup.conf to include the correct PCI ID devices to configure in the VPP, the number of worker threads, core list and main core.
+
+main-core 1
+corelist-workers 2-3  (for 2 worker threads)
+workers 2
+## Whitelist specific interface by specifying PCI address
+dev 0000:00:04.0
+dev 0000:00:05.0
+
+
+Go to the /root/vpp-vrouter folder in the VM to create your port configuration in VPP.
+cd /root/vpp-vrouter
+vpp-2p.conf is the 2 port configuration for VPP Router setup.
+You can refer to vpp-2p.conf to create 4-port, 6-port, and 8-port configuration.
+
+Once all has been edited, start vpp:
+systemctl start vpp
+
+systemctl status vpp  (to check status of VPP)
+
+from the host, access to VPP:
+telnet localhost 5002
+
+Trying ::1...
+Trying 127.0.0.1...
+Connected to localhost.
+Escape character is '^]'.
+    _______    _        _   _____  ___ 
+ __/ __/ _ \  (_)__    | | / / _ \/ _ \
+ _/ _// // / / / _ \   | |/ / ___/ ___/
+ /_/ /____(_)_/\___/   |___/_/  /_/    
+
+vpp# show interface 
+vpp# exec /root/vpp-vrouter/vpp-2p.conf    (to configure router with 2 interfaces)
+vpp# show interface		            (you should see all the interfaces are up)
+vpp# show ip arp     (IXIA would learn the IP and this would output the IP address of the IXIA ports)
+vpp# show thread     (show the number of worker thread)
+vpp# show interface rx-placement       (show whether each port is on separate worker thread)
+
+VPP is ready.
+
+Back on the host, do the CPU pinning on the VPP VM. Follow the steps documented in ovs-dpdk VM CPU pinning.
+
+On the IXIA, there will be protocol interface and static to be enabled. You will learn the ARP on the porotocl interface.
+
+Use the attached IXIA config as your reference.
+
