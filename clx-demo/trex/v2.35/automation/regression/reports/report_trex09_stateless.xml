@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="33" errors="1" failures="0" skip="32"><testcase classname="stateless_tests.stl_general_test.STLBasic_Test" name="test_connectivity" time="9.450"><error type="builtins.Exception" message="Test failed. Reasons:&#10;Client could not map ports"><![CDATA[Traceback (most recent call last):
+  File "/sw/packages/python3/current/lib/python3.4/unittest/case.py", line 57, in testPartExecutor
+    yield
+  File "/sw/packages/python3/current/lib/python3.4/unittest/case.py", line 577, in run
+    self.tearDown()
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/stateful_tests/trex_general_test.py", line 442, in tearDown
+    raise Exception('Test failed. Reasons:\n%s' % '\n'.join(self.fail_reasons))
+Exception: Test failed. Reasons:
+Client could not map ports
+]]></error><system-out><![CDATA[Starting TRex... done. (0s)
+Connecting.
+Connected
+Mapping ports..........
+Error: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_benchmark_test.STLBenchmark_Test" name="test_CPU_benchmark" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_arp_capture" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_basic_capture" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_ping_capture" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_stress_capture" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_stress_tx_rx" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_all_profiles" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_connect_disconnect" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_cont" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_multi_burst" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_single_burst" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_latency_pause_resume" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_pcap_remote" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_stress_connect_disconnect" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_stress_tx" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_examples_test.STLExamples_Test" name="test_stl_examples" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_ipv6_test.STLIPv6_Test" name="test_stl_ipv6_ping" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_ipv6_test.STLIPv6_Test" name="test_stl_ipv6_scan6" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_syn_attack_multi_cpus" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_syn_attack_single_cpu" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_multi_cpus" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_multi_cpus_cached" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_single_cpu" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_single_cpu_cached" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_1_stream_many_iterations" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_9k_stream" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_fcs_stream" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_incremental_latency_streams" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_multiple_streams" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_multiple_streams_random" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_one_stream" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_x710_counters_wraparound" time="0.000"><skipped type="unittest.case.SkipTest" message="Client could not map ports"><![CDATA[Exception: Client could not map ports
+]]></skipped><system-out><![CDATA[Skip: Client could not map ports
+]]></system-out></testcase></testsuite>

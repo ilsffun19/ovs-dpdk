@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="1" errors="0" failures="0" skip="0"><testcase classname="astf_basic_tests.CAstfPcapFull_Test" name="test_astf_caps" time="0.261"><system-out><![CDATA[checking astf/http_manual_commands_fin_ack.py
+executing /auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/bp-sim-64-debug --pcap --tcp_cfg /tmp/astf.json -o /auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/generated/http_manual_commands_fin_ack.generated.pcap --full -d 5.0
+]]></system-out></testcase></testsuite>

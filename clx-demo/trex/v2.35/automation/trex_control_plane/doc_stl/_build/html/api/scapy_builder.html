@@ -1,0 +1,311 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Packet builder modules &mdash; TRex Stateless Python API 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Stateless Python API 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="TRex Stateless API Reference" href="index.html" />
+    <link rel="next" title="Field Engine modules" href="field_engine.html" />
+    <link rel="prev" title="Traffic profile modules" href="profile_code.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="field_engine.html" title="Field Engine modules"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="profile_code.html" title="Traffic profile modules"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="packet-builder-modules">
+<h1>Packet builder modules<a class="headerlink" href="#packet-builder-modules" title="Permalink to this headline">¶</a></h1>
+<p>The packet builder module objective is to build a template packet for a stream and to create a Field engine program to change fields in the packet.</p>
+<p><strong>Some examples for what can be done:</strong></p>
+<ul class="simple">
+<li>Build a IP/UDP/DNS packet and create a range of src_ip = 10.0.0.1-10.0.0.255</li>
+<li>Build a IP/UDP packets in IMIX sizes</li>
+</ul>
+<p>for example this snippet will create SYN Attack:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># create attack from random src_ip from 16.0.0.0-18.0.0.254 and random src_port 1025-65000</span>
+<span class="c"># attack 48.0.0.1 server</span>
+
+<span class="k">def</span> <span class="nf">create_stream</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+
+    <span class="c"># TCP SYN</span>
+    <span class="n">base_pkt</span>  <span class="o">=</span> <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">TCP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span><span class="n">flags</span><span class="o">=</span><span class="s">&quot;S&quot;</span><span class="p">)</span>
+
+    <span class="n">pkt</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">STLStream</span><span class="p">(</span><span class="n">packet</span> <span class="o">=</span> <span class="n">pkt</span><span class="p">,</span>    <span class="c">#&lt;&lt;&lt;&lt;&lt; set packet builder inside the stream</span>
+                     <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="section" id="stlpktbuilder-class">
+<h2>STLPktBuilder  class<a class="headerlink" href="#stlpktbuilder-class" title="Permalink to this headline">¶</a></h2>
+<p>Aggregate a raw instructions objects</p>
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_packet_builder_scapy.</code><code class="descname">STLPktBuilder</code><span class="sig-paren">(</span><em>pkt=None</em>, <em>pkt_buffer=None</em>, <em>vm=None</em>, <em>path_relative_to_profile=False</em>, <em>build_raw=False</em>, <em>remove_fcs=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class defines a way to build a template packet, and Field Engine using scapy package.
+Using this class the user can also define how TRex will handle the packet by specifying the Field engine setting.
+pkt could be Scapy pkt or pcap file name 
+When path_relative_to_profile is a True load pcap file from a path relative to the profile</p>
+<div class="literal-block-wrapper container" id="example6">
+<div class="code-block-caption"><span class="caption-text">Example6</span><a class="headerlink" href="#example6" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>    <span class="c"># packet is scapy</span>
+    <span class="n">STLPktBuilder</span><span class="p">(</span> <span class="n">pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">10</span><span class="o">*</span><span class="s">&#39;x&#39;</span><span class="p">)</span> <span class="p">)</span>
+
+
+    <span class="c"># packet is taken from pcap file relative to python </span>
+    <span class="n">STLPktBuilder</span><span class="p">(</span> <span class="n">pkt</span> <span class="o">=</span><span class="s">&quot;stl/yaml/udp_64B_no_crc.pcap&quot;</span><span class="p">)</span>
+
+    <span class="c"># packet is taken from pcap file relative to profile file </span>
+    <span class="n">STLPktBuilder</span><span class="p">(</span> <span class="n">pkt</span> <span class="o">=</span><span class="s">&quot;stl/yaml/udp_64B_no_crc.pcap&quot;</span><span class="p">,</span>
+                        <span class="n">path_relative_to_profile</span> <span class="o">=</span> <span class="bp">True</span> <span class="p">)</span>
+
+
+    <span class="n">vm</span> <span class="o">=</span> <span class="n">STLScVmRaw</span><span class="p">(</span> <span class="p">[</span>   <span class="n">STLVmTupleGen</span> <span class="p">(</span> <span class="n">ip_min</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span> <span class="n">ip_max</span><span class="o">=</span><span class="s">&quot;16.0.0.2&quot;</span><span class="p">,</span> 
+                                           <span class="n">port_min</span><span class="o">=</span><span class="mi">1025</span><span class="p">,</span> <span class="n">port_max</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span>
+                                            <span class="n">name</span><span class="o">=</span><span class="s">&quot;tuple&quot;</span><span class="p">),</span> <span class="c"># define tuple gen </span>
+
+                     <span class="n">STLVmWrFlowVar</span> <span class="p">(</span><span class="n">fv_name</span><span class="o">=</span><span class="s">&quot;tuple.ip&quot;</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="o">=</span> <span class="s">&quot;IP.src&quot;</span> <span class="p">),</span> <span class="c"># write ip to packet IP.src</span>
+                     <span class="n">STLVmFixIpv4</span><span class="p">(</span><span class="n">offset</span> <span class="o">=</span> <span class="s">&quot;IP&quot;</span><span class="p">),</span>                                <span class="c"># fix checksum</span>
+                     <span class="n">STLVmWrFlowVar</span> <span class="p">(</span><span class="n">fv_name</span><span class="o">=</span><span class="s">&quot;tuple.port&quot;</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="o">=</span> <span class="s">&quot;UDP.sport&quot;</span> <span class="p">)</span>  <span class="c">#write udp.port</span>
+                     <span class="p">]</span>
+                   <span class="p">)</span>
+
+    <span class="n">base_pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_pkt</span><span class="p">))</span> <span class="o">*</span> <span class="s">&#39;x&#39;</span>
+
+    <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="o">/</span><span class="n">pad</span><span class="p">,</span> <span class="n">vm</span><span class="o">=</span> <span class="n">vm</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>pkt <span class="classifier-delimiter">:</span> <span class="classifier">string, </span></dt>
+<dd><p class="first last">Scapy or pcap file filename a scapy packet</p>
+</dd>
+<dt>pkt_buffer <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">a packet as buffer</p>
+</dd>
+<dt>vm <span class="classifier-delimiter">:</span> <span class="classifier">list or base on <a class="reference internal" href="field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLScVmRaw" title="trex_stl_lib.trex_stl_packet_builder_scapy.STLScVmRaw"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_packet_builder_scapy.STLScVmRaw</span></code></a></span></dt>
+<dd><p class="first last">a list of instructions to manipolate packet fields</p>
+</dd>
+<dt>path_relative_to_profile <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">in case pkt is pcap file,  do we want to load it relative to profile file</p>
+</dd>
+<dt>build_raw <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">Do we want to build scapy in case buffer was given. good for cases we want offset to be taken from scapy</p>
+</dd>
+<dt>remove_fcs <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">in case of buffer do we want to remove fcs</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.get_vm_data">
+<code class="descname">get_vm_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder.get_vm_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.get_vm_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dumps the instructions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">None</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><ul class="simple">
+<li>json object of instructions</li>
+</ul>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">AssertionError</span></code>, in case VM is not compiled (is None).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.dump_pkt">
+<code class="descname">dump_pkt</code><span class="sig-paren">(</span><em>encode=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder.dump_pkt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.dump_pkt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dumps the packet as a decimal array of bytes (each item x gets value between 0-255)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>encode <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first">Encode using base64. (disable for debug)</p>
+<p class="last">Default: <strong>True</strong></p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><ul class="simple">
+<li>packet representation as array of bytes</li>
+</ul>
+</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">AssertionError</span></code>, in case packet is empty.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.pkt_layers_desc">
+<code class="descname">pkt_layers_desc</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder.pkt_layers_desc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.pkt_layers_desc" title="Permalink to this definition">¶</a></dt>
+<dd><p>return layer description like this IP:TCP:Pyload</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_pcap_file">
+<code class="descname">set_pcap_file</code><span class="sig-paren">(</span><em>pcap_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder.set_pcap_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_pcap_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>load raw pcap file into a buffer. load only the first packet</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">pcap_file : file_name</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">AssertionError</span></code>, in case packet is empty.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_packet">
+<code class="descname">set_packet</code><span class="sig-paren">(</span><em>pkt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_packet_builder_scapy.html#STLPktBuilder.set_packet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_packet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scapy packet</p>
+<p>For Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pkt</span> <span class="o">=</span><span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span><span class="o">/</span><span class="n">IP</span><span class="p">()</span><span class="o">/</span><span class="p">(</span><span class="s">&#39;x&#39;</span><span class="o">*</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Packet builder modules</a><ul>
+<li><a class="reference internal" href="#stlpktbuilder-class">STLPktBuilder  class</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="profile_code.html"
+                        title="previous chapter">Traffic profile modules</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="field_engine.html"
+                        title="next chapter">Field Engine modules</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/scapy_builder.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="field_engine.html" title="Field Engine modules"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="profile_code.html" title="Traffic profile modules"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

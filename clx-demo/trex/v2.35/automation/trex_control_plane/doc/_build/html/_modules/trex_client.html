@@ -1,0 +1,1781 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>trex_client &mdash; TRex Control Plane 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Control Plane 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for trex_client</h1><div class="highlight"><pre>
+<span class="c">#!/router/bin/python</span>
+
+<span class="c"># internal libs</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">binascii</span>
+<span class="kn">from</span> <span class="nn">distutils.util</span> <span class="kn">import</span> <span class="n">strtobool</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span><span class="p">,</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">outer_packages</span>
+    <span class="kn">from</span> <span class="nn">.trex_status_e</span> <span class="kn">import</span> <span class="n">TRexStatus</span>
+    <span class="kn">from</span> <span class="nn">.trex_exceptions</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="kn">from</span> <span class="nn">.trex_exceptions</span> <span class="kn">import</span> <span class="n">exception_handler</span>
+    <span class="kn">from</span> <span class="nn">.general_utils</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span> <span class="c"># is __main__</span>
+    <span class="kn">import</span> <span class="nn">outer_packages</span>
+    <span class="kn">from</span> <span class="nn">trex_status_e</span> <span class="kn">import</span> <span class="n">TRexStatus</span>
+    <span class="kn">from</span> <span class="nn">trex_exceptions</span> <span class="kn">import</span> <span class="o">*</span>
+    <span class="kn">from</span> <span class="nn">trex_exceptions</span> <span class="kn">import</span> <span class="n">exception_handler</span>
+    <span class="kn">from</span> <span class="nn">general_utils</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c"># external libs</span>
+<span class="kn">import</span> <span class="nn">jsonrpclib</span>
+<span class="kn">from</span> <span class="nn">jsonrpclib</span> <span class="kn">import</span> <span class="n">ProtocolError</span><span class="p">,</span> <span class="n">AppError</span>
+
+
+<div class="viewcode-block" id="CTRexClient"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient">[docs]</a><span class="k">class</span> <span class="nc">CTRexClient</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class defines the client side of the RESTfull interaction with TRex</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trex_host</span><span class="p">,</span> <span class="n">max_history_size</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">filtered_latency_amount</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">,</span> <span class="n">trex_daemon_port</span> <span class="o">=</span> <span class="mi">8090</span><span class="p">,</span> <span class="n">master_daemon_port</span> <span class="o">=</span> <span class="mi">8091</span><span class="p">,</span> <span class="n">trex_zmq_port</span> <span class="o">=</span> <span class="mi">4500</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">debug_image</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">trex_args</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="mi">30</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Instantiate a TRex client object, and connecting it to listening daemon-server</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">             trex_host : str</span>
+<span class="sd">                a string of the TRex ip address or hostname.</span>
+<span class="sd">             max_history_size : int</span>
+<span class="sd">                a number to set the maximum history size of a single TRex run. Each sampling adds a new item to history.</span>
+
+<span class="sd">                default value : **100**</span>
+
+<span class="sd">             filtered_latency_amount : float</span>
+<span class="sd">                Ignore high latency for this ammount of packets. (by default take value of 99.9% measurements)</span>
+
+<span class="sd">                default value : **0.001**</span>
+
+<span class="sd">             trex_daemon_port : int</span>
+<span class="sd">                the port number on which the trex-daemon server can be reached</span>
+
+<span class="sd">                default value: **8090**</span>
+<span class="sd">             master_daemon_port : int</span>
+<span class="sd">                the port number on which the master-daemon server can be reached</span>
+
+<span class="sd">                default value: **8091**</span>
+<span class="sd">             trex_zmq_port : int</span>
+<span class="sd">                the port number on which trex&#39;s zmq module will interact with daemon server</span>
+
+<span class="sd">                default value: **4500**</span>
+<span class="sd">             verbose : bool</span>
+<span class="sd">                sets a verbose output on supported class method.</span>
+
+<span class="sd">                default value : **False**</span>
+<span class="sd">             trex_args : string</span>
+<span class="sd">                additional arguments passed to TRex. For example, &quot;-w 3 --no-watchdog&quot;</span>
+
+<span class="sd">             timeout : int</span>
+<span class="sd">                timeout in seconds to wait for socket response</span>
+<span class="sd">                default value: **30**</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            socket errors, in case server could not be reached.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span>          <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">(</span><span class="n">trex_host</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span> <span class="c"># give it another try</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span>          <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">(</span><span class="n">trex_host</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trex_daemon_port</span>       <span class="o">=</span> <span class="n">trex_daemon_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon_port</span>     <span class="o">=</span> <span class="n">master_daemon_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trex_zmq_port</span>          <span class="o">=</span> <span class="n">trex_zmq_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seq</span>                    <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_sample</span>           <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__default_user</span>         <span class="o">=</span> <span class="n">get_current_user</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span>                <span class="o">=</span> <span class="n">verbose</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span>             <span class="o">=</span> <span class="n">CTRexResult</span><span class="p">(</span><span class="n">max_history_size</span><span class="p">,</span> <span class="n">filtered_latency_amount</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">history</span>                <span class="o">=</span> <span class="n">jsonrpclib</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">History</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon_path</span>     <span class="o">=</span> <span class="s">&quot;http://{hostname}:{port}/&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">hostname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="n">master_daemon_port</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span>          <span class="o">=</span> <span class="n">jsonrpclib</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">master_daemon_path</span><span class="p">,</span> <span class="n">history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trex_server_path</span>       <span class="o">=</span> <span class="s">&quot;http://{hostname}:{port}/&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">hostname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span><span class="p">,</span> <span class="n">port</span> <span class="o">=</span> <span class="n">trex_daemon_port</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server</span>                 <span class="o">=</span> <span class="n">jsonrpclib</span><span class="o">.</span><span class="n">Server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trex_server_path</span><span class="p">,</span> <span class="n">history</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="n">timeout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">debug_image</span>            <span class="o">=</span> <span class="n">debug_image</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trex_args</span>              <span class="o">=</span> <span class="n">trex_args</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_to_run_finish</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_until_finish</span> <span class="c"># alias for legacy</span>
+
+
+    <span class="k">def</span> <span class="nf">add</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+    <span class="c"># internal method which polls for TRex state until it&#39;s running or timeout happens</span>
+    <span class="k">def</span> <span class="nf">_block_to_success</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="p">,</span> <span class="n">poll_interval</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">timeout</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;&#39;timeout&#39; should be positive integer in case of &#39;block_to_success&#39;&quot;</span><span class="p">)</span>
+        <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">while</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">start_time</span> <span class="o">+</span> <span class="n">timeout</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_running_status</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">status</span><span class="p">[</span><span class="s">&#39;state&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">TRexStatus</span><span class="o">.</span><span class="n">Running</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="k">if</span> <span class="n">status</span><span class="p">[</span><span class="s">&#39;state&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">TRexStatus</span><span class="o">.</span><span class="n">Idle</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;TRex is back to Idle state, verbose output:</span><span class="se">\n</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">status</span><span class="p">[</span><span class="s">&#39;verbose&#39;</span><span class="p">])</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll_interval</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Timeout of </span><span class="si">%s</span><span class="s">s happened during wait for TRex to become in &#39;Running&#39; state&quot;</span> <span class="o">%</span> <span class="n">timeout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CTRexClient.start_trex"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.start_trex">[docs]</a>    <span class="k">def</span> <span class="nf">start_trex</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">block_to_success</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">trex_development</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">trex_cmd_options</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Request to start a TRex run on server in stateful mode.</span>
+
+<span class="sd">        :parameters:  </span>
+<span class="sd">            f : str</span>
+<span class="sd">                a path (on server) for the injected traffic data (.yaml file)</span>
+<span class="sd">            d : int</span>
+<span class="sd">                the desired duration of the test. must be at least 30 seconds long.</span>
+<span class="sd">            block_to_success : bool</span>
+<span class="sd">                determine if this method blocks until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">                default value : **True**</span>
+<span class="sd">            timeout : int</span>
+<span class="sd">                maximum time (in seconds) to wait in blocking state until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">                default value: **40**</span>
+<span class="sd">            user : str</span>
+<span class="sd">                the identity of the the run issuer.</span>
+<span class="sd">            trex_cmd_options : key, val</span>
+<span class="sd">                sets desired TRex options using key=val syntax, separated by comma.</span>
+<span class="sd">                for keys with no value, state key=True</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            **True** on success</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`ValueError`, in case &#39;d&#39; parameter inserted with wrong value.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexError`, in case one of the trex_cmd_options raised an exception at server.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexInUseError`, in case TRex is already taken.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying start TRex.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__default_user</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;d parameter must be integer, specifying how long TRex run.&#39;</span><span class="p">)</span>
+
+        <span class="n">trex_cmd_options</span><span class="o">.</span><span class="n">update</span><span class="p">(</span> <span class="p">{</span><span class="s">&#39;f&#39;</span> <span class="p">:</span> <span class="n">f</span><span class="p">,</span> <span class="s">&#39;d&#39;</span> <span class="p">:</span> <span class="n">d</span><span class="p">}</span> <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">latency_checked</span> <span class="o">=</span> <span class="s">&#39;l&#39;</span> <span class="ow">in</span> <span class="n">trex_cmd_options</span>
+        <span class="k">if</span> <span class="s">&#39;k&#39;</span> <span class="ow">in</span> <span class="n">trex_cmd_options</span><span class="p">:</span>
+            <span class="n">timeout</span> <span class="o">+=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trex_cmd_options</span><span class="p">[</span><span class="s">&#39;k&#39;</span><span class="p">])</span> <span class="c"># during &#39;k&#39; seconds TRex stays in &#39;Starting&#39; state</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">clear_results</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">issue_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="n">trex_cmd_options</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug_image</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex_args</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">block_to_success</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_block_to_success</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">retval</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">seq</span> <span class="o">=</span> <span class="n">retval</span>   <span class="c"># update seq num only on successful submission</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>   <span class="c"># TRex is has been started by another user</span>
+            <span class="k">raise</span> <span class="n">TRexInUseError</span><span class="p">(</span><span class="s">&#39;TRex is already being used by another user or process. Try again once TRex is back in IDLE state.&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.start_stateless"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.start_stateless">[docs]</a>    <span class="k">def</span> <span class="nf">start_stateless</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block_to_success</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="mi">40</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">trex_cmd_options</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Request to start a TRex run on server in stateless mode.</span>
+
+<span class="sd">        :parameters:  </span>
+<span class="sd">            block_to_success : bool</span>
+<span class="sd">                determine if this method blocks until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">                default value : **True**</span>
+<span class="sd">            timeout : int</span>
+<span class="sd">                maximum time (in seconds) to wait in blocking state until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">                default value: **40**</span>
+<span class="sd">            user : str</span>
+<span class="sd">                the identity of the the run issuer.</span>
+<span class="sd">            trex_cmd_options : key, val</span>
+<span class="sd">                sets desired TRex options using key=val syntax, separated by comma.</span>
+<span class="sd">                for keys with no value, state key=True</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            **True** on success</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexError`, in case one of the trex_cmd_options raised an exception at server.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexInUseError`, in case TRex is already taken.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying start TRex.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__default_user</span>
+            <span class="n">retval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="n">trex_cmd_options</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="bp">False</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug_image</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex_args</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">block_to_success</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_block_to_success</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">retval</span><span class="o">!=</span><span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">seq</span> <span class="o">=</span> <span class="n">retval</span>   <span class="c"># update seq num only on successful submission</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>   <span class="c"># TRex is has been started by another user</span>
+            <span class="k">raise</span> <span class="n">TRexInUseError</span><span class="p">(</span><span class="s">&#39;TRex is already being used by another user or process. Try again once TRex is back in IDLE state.&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.stop_trex"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.stop_trex">[docs]</a>    <span class="k">def</span> <span class="nf">stop_trex</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Request to stop a TRex run on server.</span>
+
+<span class="sd">        The request is only valid if the stop initiator is the same client as the TRex run initiator.</span>
+<span class="sd">                </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** on successful termination </span>
+<span class="sd">            + **False** if request issued but TRex wasn&#39;t running.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex ir running but started by another user.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">stop_trex</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seq</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.force_kill"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.force_kill">[docs]</a>    <span class="k">def</span> <span class="nf">force_kill</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">confirm</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Force killing of running TRex process (if exists) on the server.</span>
+
+<span class="sd">        .. tip:: This method is a safety method and **overrides any running or reserved resources**, and as such isn&#39;t designed to be used on a regular basis. </span>
+<span class="sd">                 Always consider using :func:`trex_client.CTRexClient.stop_trex` instead.</span>
+
+<span class="sd">        In the end of this method, TRex will return to IDLE state with no reservation.</span>
+<span class="sd">        </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            confirm : bool</span>
+<span class="sd">                Prompt a user confirmation before continue terminating TRex session</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** on successful termination </span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">confirm</span><span class="p">:</span>
+            <span class="n">prompt</span> <span class="o">=</span> <span class="s">&quot;WARNING: This will terminate active TRex session indiscriminately.</span><span class="se">\n</span><span class="s">Are you sure? &quot;</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s"> [y/n]</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">prompt</span><span class="p">)</span>
+            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">strtobool</span><span class="p">(</span><span class="n">user_input</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()):</span>
+                        <span class="k">break</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">return</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;Please respond with </span><span class="se">\&#39;</span><span class="s">y</span><span class="se">\&#39;</span><span class="s"> or </span><span class="se">\&#39;</span><span class="s">n</span><span class="se">\&#39;</span><span class="s">.</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">force_trex_kill</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="c"># Silence any kind of application errors- by design</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.kill_all_trexes"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.kill_all_trexes">[docs]</a>    <span class="k">def</span> <span class="nf">kill_all_trexes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="mi">15</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Kills running TRex processes (if exists) on the server, not only owned by current daemon.</span>
+<span class="sd">        Raises exception upon error killing.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if processes killed/not running</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">poll_rate</span> <span class="o">=</span> <span class="mf">0.1</span>
+            <span class="c"># try Ctrl+C, usual kill, -9</span>
+            <span class="k">for</span> <span class="n">signal_name</span> <span class="ow">in</span> <span class="p">[</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGKILL</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">kill_all_trexes</span><span class="p">(</span><span class="n">signal_name</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">timeout</span> <span class="o">/</span> <span class="n">poll_rate</span><span class="p">)):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_trex_cmds</span><span class="p">():</span>
+                        <span class="k">return</span> <span class="bp">True</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">poll_rate</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_trex_cmds</span><span class="p">():</span>
+                <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_cmds"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_cmds">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_cmds</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets list of running TRex pids and command lines.</span>
+<span class="sd">        Can be used to verify if any TRex is running.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            List of tuples (pid, command) of running TRexes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_trex_cmds</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_path"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Returns TRex path on server</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">get_trex_path</span><span class="p">())</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+        
+</div>
+<div class="viewcode-block" id="CTRexClient.wait_until_kickoff_finish"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.wait_until_kickoff_finish">[docs]</a>    <span class="k">def</span> <span class="nf">wait_until_kickoff_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="mi">40</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Block the client application until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">        The request is only valid if the stop initiator is the same client as the TRex run initiator.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            timeout : int</span>
+<span class="sd">                maximum time (in seconds) to wait in blocking state until TRex changes state from &#39;Starting&#39; to either &#39;Idle&#39; or &#39;Running&#39;</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** on successful termination </span>
+<span class="sd">            + **False** if request issued but TRex wasn&#39;t running.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">            .. note::  Exceptions are throws only when start_trex did not block in the first place, i.e. `block_to_success` parameter was set to `False`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">wait_until_kickoff_finish</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.is_running"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.is_running">[docs]</a>    <span class="k">def</span> <span class="nf">is_running</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dump_out</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Poll for TRex running status.</span>
+
+<span class="sd">        If TRex is running, a history item will be added into result_obj and processed.</span>
+
+<span class="sd">        .. tip:: This method is especially useful for iterating until TRex run is finished.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            dump_out : dict</span>
+<span class="sd">                if passed, the pointer object is cleared and the latest dump stored in it.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if TRex is running.</span>
+<span class="sd">            + **False** if TRex is not running.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_running_info</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">res</span> <span class="o">==</span> <span class="p">{}:</span>
+                <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">dump_out</span> <span class="o">!=</span> <span class="bp">False</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dump_out</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>        <span class="c"># save received dump to given &#39;dump_out&#39; pointer</span>
+                <span class="n">dump_out</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                <span class="n">dump_out</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">except</span> <span class="n">TRexWarning</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">code</span> <span class="o">==</span> <span class="o">-</span><span class="mi">12</span><span class="p">:</span>      <span class="c"># TRex is either still at &#39;Starting&#39; state or in Idle state, however NO error occured</span>
+                <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">except</span> <span class="n">TRexException</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="c">#is printed by self.get_running_info()</span>
+        <span class="c">#finally:</span>
+        <span class="c">#    self.prompt_verbose_data()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.is_idle"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.is_idle">[docs]</a>    <span class="k">def</span> <span class="nf">is_idle</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Poll for TRex running status, check if TRex is in Idle state.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if TRex is idle.</span>
+<span class="sd">            + **False** if TRex is starting or running.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_running_status</span><span class="p">()[</span><span class="s">&#39;state&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">TRexStatus</span><span class="o">.</span><span class="n">Idle</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">except</span> <span class="n">TRexException</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_files_path"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_files_path">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_files_path</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the local path in which files are stored when pushed to TRex server from client.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            string representation of the desired path</span>
+
+<span class="sd">            .. note::  The returned path represents a path on the TRex server **local machine**</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_files_path</span><span class="p">()</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_running_status"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_running_status">[docs]</a>    <span class="k">def</span> <span class="nf">get_running_status</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the current TRex status.</span>
+
+<span class="sd">        If available, a verbose data will accompany the state itself.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary with &#39;state&#39; and &#39;verbose&#39; keys.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_running_status</span><span class="p">()</span>
+            <span class="n">res</span><span class="p">[</span><span class="s">&#39;state&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TRexStatus</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s">&#39;state&#39;</span><span class="p">])</span>
+            <span class="k">return</span> <span class="n">res</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_running_info"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_running_info">[docs]</a>    <span class="k">def</span> <span class="nf">get_running_info</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Performs single poll of TRex running data and process it into the result object (named `result_obj`).</span>
+
+<span class="sd">        .. tip:: This method will throw an exception if TRex isn&#39;t running. Always consider using :func:`trex_client.CTRexClient.is_running` which handles a single poll operation in safer manner.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the most updated data dump from TRex.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_query_relevance</span><span class="p">():</span>
+            <span class="c"># if requested in timeframe smaller than the original sample rate, return the last known data without interacting with server</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">get_latest_dump</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span> 
+                <span class="n">latest_dump</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_running_info</span><span class="p">()</span> <span class="p">)</span> <span class="c"># latest dump is not a dict, but json string. decode it.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">update_result_data</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">latest_dump</span>
+            <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&#39;JSON-RPC data decoding failed. Check out incoming JSON stream.&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+                <span class="k">raise</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.sample_until_condition"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.sample_until_condition">[docs]</a>    <span class="k">def</span> <span class="nf">sample_until_condition</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">condition_func</span><span class="p">,</span> <span class="n">time_between_samples</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Automatically sets ongoing sampling of TRex data, with sampling rate described by time_between_samples.</span>
+
+<span class="sd">        On each fetched dump, the condition_func is applied on the result objects, and if returns True, the sampling will stop.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            condition_func : function</span>
+<span class="sd">                function that operates on result_obj and checks if a condition has been met</span>
+
+<span class="sd">                .. note:: `condition_finc` is applied on `CTRexResult` object. Make sure to design a relevant method.</span>
+<span class="sd">            time_between_samples : int</span>
+<span class="sd">                determines the time between each sample of the server</span>
+
+<span class="sd">                default value : **1**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            the first result object (see :class:`CTRexResult` for further details) of the TRex run on which the condition has been met.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`UserWarning`, in case the condition_func method condition hasn&#39;t been met</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+<span class="sd">            + :exc:`Exception`, in case the condition_func suffered from any kind of exception</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># make sure TRex is running. raise exceptions here if any</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_until_kickoff_finish</span><span class="p">()</span>    
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_running</span><span class="p">():</span>
+                <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">condition_func</span><span class="p">(</span><span class="n">results</span><span class="p">):</span>
+                    <span class="c"># if condition satisfied, stop TRex and return result object</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">stop_trex</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="n">results</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">time_between_samples</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexWarning</span><span class="p">:</span>
+            <span class="c"># means we&#39;re back to Idle state, and didn&#39;t meet our condition</span>
+            <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s">&quot;TRex results condition wasn&#39;t met during TRex run.&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="c"># this could come from provided method &#39;condition_func&#39;</span>
+            <span class="k">raise</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.sample_until_finish"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.sample_until_finish">[docs]</a>    <span class="k">def</span> <span class="nf">sample_until_finish</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_between_samples</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Automatically samples TRex data with sampling rate described by time_between_samples until TRex run finishes.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            time_between_samples : int</span>
+<span class="sd">                determines the time between each sample of the server</span>
+
+<span class="sd">                default value : **1**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            the latest result object (see :class:`CTRexResult` for further details) with sampled data.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`UserWarning`, in case the condition_func method condition hasn&#39;t been met</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_until_kickoff_finish</span><span class="p">()</span>    
+        
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_running</span><span class="p">():</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">time_between_samples</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexWarning</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="c"># try to get final server dump</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">latest_server_dump</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_latest_dump</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">latest_server_dump</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">get_latest_dump</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="o">.</span><span class="n">update_result_data</span><span class="p">(</span><span class="n">latest_server_dump</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">results</span>
+            </div>
+<div class="viewcode-block" id="CTRexClient.sample_x_seconds"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.sample_x_seconds">[docs]</a>    <span class="k">def</span> <span class="nf">sample_x_seconds</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_time</span><span class="p">,</span> <span class="n">time_between_samples</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Automatically sets ongoing sampling of TRex data for sample_time seconds, with sampling rate described by time_between_samples.</span>
+<span class="sd">        Does not stop the TRex afterwards!</span>
+
+<span class="sd">        .. tip:: Useful for changing the device (Router, ASA etc.) configuration after given time.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            sample_time : int</span>
+<span class="sd">                sample the TRex this number of seconds</span>
+
+<span class="sd">            time_between_samples : int</span>
+<span class="sd">                determines the time between each sample of the server</span>
+
+<span class="sd">                default value : **1**</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">            the first result object (see :class:`CTRexResult` for further details) of the TRex run after given sample_time.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`UserWarning`, in case the TRex run ended before sample_time duration</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexIncompleteRunError`, in case one of failed TRex run (unexpected termination).</span>
+<span class="sd">            + :exc:`TypeError`, in case JSON stream decoding error.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># make sure TRex is running. raise exceptions here if any</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wait_until_kickoff_finish</span><span class="p">()</span>
+        <span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">+</span> <span class="n">sample_time</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_running</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">end_time</span><span class="p">:</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">time_between_samples</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s">&quot;TRex has stopped at </span><span class="si">%s</span><span class="s"> seconds (before expected </span><span class="si">%s</span><span class="s"> seconds)</span><span class="se">\n</span><span class="s">Try increasing test duration or decreasing sample_time&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">elapsed_time</span><span class="p">,</span> <span class="n">sample_time</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_result_obj"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_result_obj">[docs]</a>    <span class="k">def</span> <span class="nf">get_result_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">copy_obj</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the result object of the trex_client&#39;s instance. </span>
+
+<span class="sd">        By default, returns a **copy** of the objects (so that changes to the original object are masked).</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            copy_obj : bool</span>
+<span class="sd">                False means that a reference to the original (possibly changing) object are passed </span>
+
+<span class="sd">                defaul value : **True**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            the latest result object (see :class:`CTRexResult` for further details) with sampled data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">copy_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_obj</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.is_reserved"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.is_reserved">[docs]</a>    <span class="k">def</span> <span class="nf">is_reserved</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if TRex is currently reserved to any user or not.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if TRex is reserved.</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">is_reserved</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_daemon_log"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_daemon_log">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_daemon_log</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get Trex daemon log.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            String representation of TRex daemon log</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case file could not be read.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">binascii</span><span class="o">.</span><span class="n">a2b_base64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_trex_daemon_log</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">bytes</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">res</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_log"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_log">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_log</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get TRex CLI output log</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            String representation of TRex log</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case file could not be fetched at server side.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">binascii</span><span class="o">.</span><span class="n">a2b_base64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_trex_log</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">bytes</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">res</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_version"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_version">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_version</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get TRex version details.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            Trex details (Version, User, Date, Uuid, Git SHA) as ordered dictionary</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex version could not be determined.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+<span class="sd">            + General Exception is case one of the keys is missing in response</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">version_dict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">binascii</span><span class="o">.</span><span class="n">a2b_base64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_trex_version</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">bytes</span><span class="p">:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="n">result_lines</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">result_lines</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;:&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">version_dict</span><span class="p">[</span><span class="n">key</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;Version&#39;</span><span class="p">,</span> <span class="s">&#39;User&#39;</span><span class="p">,</span> <span class="s">&#39;Date&#39;</span><span class="p">,</span> <span class="s">&#39;Uuid&#39;</span><span class="p">,</span> <span class="s">&#39;Git SHA&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">version_dict</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;get_trex_version: got server response without key: {0}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">version_dict</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.reserve_trex"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.reserve_trex">[docs]</a>    <span class="k">def</span> <span class="nf">reserve_trex</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reserves the usage of TRex to a certain user.</span>
+
+<span class="sd">        When TRex is reserved, it can&#39;t be reserved.</span>
+<span class="sd">                </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            user : str</span>
+<span class="sd">                a username of the desired owner of TRex</span>
+
+<span class="sd">                default: current logged user</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            **True** if reservation made successfully</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying to make the reservation.</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexInUseError`, in case TRex is currently running.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">username</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__default_user</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">reserve_trex</span><span class="p">(</span><span class="n">user</span> <span class="o">=</span> <span class="n">username</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.cancel_reservation"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.cancel_reservation">[docs]</a>    <span class="k">def</span> <span class="nf">cancel_reservation</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Cancels a current reservation of TRex to a certain user.</span>
+
+<span class="sd">        When TRex is reserved, no other user can start new TRex runs.</span>
+
+<span class="sd">                </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            user : str</span>
+<span class="sd">                a username of the desired owner of TRex</span>
+
+<span class="sd">                default: current logged user</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if reservation canceled successfully, </span>
+<span class="sd">            + **False** if there was no reservation at all.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying to cancel the reservation.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">username</span> <span class="o">=</span> <span class="n">user</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">__default_user</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">cancel_reservation</span><span class="p">(</span><span class="n">user</span> <span class="o">=</span> <span class="n">username</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_files_list"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_files_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_files_list</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets a list of dirs and files either from /tmp/trex_files or path relative to TRex server.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            path : str</span>
+<span class="sd">                a path to directory to read.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            Tuple: list of dirs and list of files in given path</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying to cancel the reservation.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_files_list</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_file"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_file">[docs]</a>    <span class="k">def</span> <span class="nf">get_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Gets content of file as bytes string from /tmp/trex_files or TRex server directory.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            filepath : str</span>
+<span class="sd">                a path to a file at server.</span>
+<span class="sd">                it can be either relative to TRex server or absolute path starting with /tmp/trex_files</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            Content of the file</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case TRex is reserved for another user than the one trying to cancel the reservation.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">binascii</span><span class="o">.</span><span class="n">a2b_base64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_file</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.get_trex_config"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.get_trex_config">[docs]</a>    <span class="k">def</span> <span class="nf">get_trex_config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get Trex config file (/etc/trex_cfg.yaml).</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">            String representation of TRex config file</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`trex_exceptions.TRexRequestDenied`, in case file could not be read.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">binascii</span><span class="o">.</span><span class="n">a2b_base64</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">get_trex_config</span><span class="p">())</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">bytes</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">res</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">except</span> <span class="n">ProtocolError</span><span class="p">:</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.push_files"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.push_files">[docs]</a>    <span class="k">def</span> <span class="nf">push_files</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepaths</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pushes a file (or a list of files) to store locally on server. </span>
+<span class="sd">                </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            filepaths : str or list</span>
+<span class="sd">                a path to a file to be pushed to server.</span>
+<span class="sd">                if a list of paths is passed, all of those will be pushed to server</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if file(s) copied successfully.</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`IOError`, in case specified file wasn&#39;t found or could not be accessed.</span>
+<span class="sd">            + ProtocolError, in case of error in JSON-RPC protocol.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">paths_list</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filepaths</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">paths_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">filepaths</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">filepaths</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">paths_list</span> <span class="o">=</span> <span class="n">filepaths</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s">&quot;filepaths argument must be of type str or list&quot;</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">filepath</span> <span class="ow">in</span> <span class="n">paths_list</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ENOENT</span><span class="p">,</span> <span class="s">&quot;The requested `{fname}` file wasn&#39;t found. Operation aborted.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">fname</span> <span class="o">=</span> <span class="n">filepath</span><span class="p">)</span> <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                        <span class="n">file_content</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">push_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">binascii</span><span class="o">.</span><span class="n">b2a_base64</span><span class="p">(</span><span class="n">file_content</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.is_query_relevance"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.is_query_relevance">[docs]</a>    <span class="k">def</span> <span class="nf">is_query_relevance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if time between any two consecutive server queries (asking for live running data) passed.</span>
+
+<span class="sd">        .. note:: The allowed minimum time between each two consecutive samples is 0.5 seconds.</span>
+<span class="sd">                </span>
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if more than 0.5 seconds has been past from last server query.</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cur_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">cur_time</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">_last_sample</span> <span class="o">&lt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_last_sample</span> <span class="o">=</span> <span class="n">cur_time</span>
+            <span class="k">return</span> <span class="bp">True</span>
+</div>
+    <span class="k">def</span> <span class="nf">call_server_mathod_safely</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method_to_call</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">method_to_call</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SocketError</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">,</span> <span class="s">&quot;Connection to TRex daemon server was refused. Please make sure the server is up.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CTRexClient.check_server_connectivity"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.check_server_connectivity">[docs]</a>    <span class="k">def</span> <span class="nf">check_server_connectivity</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks TRex daemon server for connectivity.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">server</span><span class="o">.</span><span class="n">connectivity_check</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">gaierror</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">gaierror</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errno</span><span class="p">,</span> <span class="s">&quot;Could not resolve server hostname. Please make sure hostname entered correctly.&quot;</span><span class="p">)</span>    
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">,</span> <span class="s">&quot;Connection to TRex daemon server was refused. Please make sure the server is up.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.master_add"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.master_add">[docs]</a>    <span class="k">def</span> <span class="nf">master_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39; Sanity check for Master daemon &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="CTRexClient.check_master_connectivity"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.check_master_connectivity">[docs]</a>    <span class="k">def</span> <span class="nf">check_master_connectivity</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check Master daemon for connectivity.</span>
+<span class="sd">        Return True upon success</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trex_host</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">check_connectivity</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">gaierror</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">gaierror</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">errno</span><span class="p">,</span> <span class="s">&quot;Could not resolve server hostname. Please make sure hostname entered correctly.&quot;</span><span class="p">)</span>    
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">,</span> <span class="s">&quot;Connection to Master daemon was refused. Please make sure the server is up.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.is_trex_daemon_running"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.is_trex_daemon_running">[docs]</a>    <span class="k">def</span> <span class="nf">is_trex_daemon_running</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Check if TRex server daemon is running.</span>
+<span class="sd">        Returns True/False</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">is_trex_daemon_running</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.restart_trex_daemon"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.restart_trex_daemon">[docs]</a>    <span class="k">def</span> <span class="nf">restart_trex_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tries</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Restart TRex server daemon. Useful after update.</span>
+<span class="sd">        Will not fail if daemon is initially stopped.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tries</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">restart_trex_daemon</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">&#39;Exception during request: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+        <span class="k">raise</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.start_trex_daemon"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.start_trex_daemon">[docs]</a>    <span class="k">def</span> <span class="nf">start_trex_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Start TRex server daemon.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if success.</span>
+<span class="sd">            + **False** if TRex server daemon already running.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">start_trex_daemon</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="CTRexClient.stop_trex_daemon"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.stop_trex_daemon">[docs]</a>    <span class="k">def</span> <span class="nf">stop_trex_daemon</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Stop TRex server daemon.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if success.</span>
+<span class="sd">            + **False** if TRex server daemon already running.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_daemon</span><span class="o">.</span><span class="n">stop_trex_daemon</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">AppError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_handle_AppError_exception</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prompt_verbose_data</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="CTRexClient.prompt_verbose_data"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexClient.prompt_verbose_data">[docs]</a>    <span class="k">def</span> <span class="nf">prompt_verbose_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method prompts any verbose data available, only if `verbose` option has been turned on.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+            <span class="k">print</span> <span class="p">(</span><span class="s">&quot;(*) JSON-RPC request:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">print</span> <span class="p">(</span><span class="s">&quot;(*) JSON-RPC response:&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">response</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">__verbose_print</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">print_str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This private method prints the `print_str` string only in case self.verbose flag is turned on.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            print_str : str</span>
+<span class="sd">                a string to be printed</span>
+
+<span class="sd">        :returns:</span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="p">(</span><span class="n">print_str</span><span class="p">)</span>
+
+
+    
+    <span class="k">def</span> <span class="nf">_handle_AppError_exception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This private method triggres the TRex dedicated exception generation in case a general ProtocolError has been raised.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># handle known exceptions based on known error codes.</span>
+        <span class="c"># if error code is not known, raise ProtocolError</span>
+        <span class="n">exc</span> <span class="o">=</span> <span class="n">exception_handler</span><span class="o">.</span><span class="n">gen_exception</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="n">exc</span><span class="o">.</span><span class="n">__cause__</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># remove &quot;During handling of the above exception, another exception occurred:&quot; in Python3.3+</span>
+        <span class="k">raise</span> <span class="n">exc</span>
+
+</div>
+<div class="viewcode-block" id="CTRexResult"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult">[docs]</a><span class="k">class</span> <span class="nc">CTRexResult</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class containing all results received from TRex.</span>
+
+<span class="sd">    Ontop to containing the results, this class offers easier data access and extended results processing options</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_history_size</span><span class="p">,</span> <span class="n">filtered_latency_amount</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Instatiate a TRex result object</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">             max_history_size : int</span>
+<span class="sd">                A number to set the maximum history size of a single TRex run. Each sampling adds a new item to history.</span>
+<span class="sd">             filtered_latency_amount : float</span>
+<span class="sd">                Ignore high latency for this ammount of packets. (by default take into account 99.9%)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span> <span class="o">=</span> <span class="n">deque</span><span class="p">(</span><span class="n">maxlen</span> <span class="o">=</span> <span class="n">max_history_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear_results</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latency_checked</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filtered_latency_amount</span> <span class="o">=</span> <span class="n">filtered_latency_amount</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_warmup_default</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">set_warmup_default</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_warmup</span><span class="p">(</span><span class="mf">0.96</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">set_warmup</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">new_warmup_max</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warmup_max</span> <span class="o">=</span> <span class="n">new_warmup_max</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="s">&quot;Is valid history?       {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_valid_hist</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Done warmup?            {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_done_warmup</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Expected tx rate:       {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_expected_tx_rate</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Current tx rate:        {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_tx_rate</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Minimum latency:        {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_min_latency</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Maximum latency:        {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_max_latency</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Average latency:        {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_avg_latency</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Average window latency: {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_avg_window_latency</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Total drops:            {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_total_drops</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;Drop rate:              {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_drop_rate</span><span class="p">()</span> <span class="p">)</span> <span class="o">+</span>
+                <span class="s">&quot;History size so far:    {arg}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span> <span class="n">arg</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+
+<div class="viewcode-block" id="CTRexResult.get_expected_tx_rate"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_expected_tx_rate">[docs]</a>    <span class="k">def</span> <span class="nf">get_expected_tx_rate</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the expected TX rate in various units representation</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the expected TX rate, where the key is the measurement units, and the value is the measurement value.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_current_tx_rate"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_current_tx_rate">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_tx_rate</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the current TX rate in various units representation</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the current TX rate, where the key is the measurement units, and the value is the measurement value.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_tx_rate</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_max_latency"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_max_latency">[docs]</a>    <span class="k">def</span> <span class="nf">get_max_latency</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the maximum latency measured on each of the interfaces</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the maximum latency, where the key is the measurement interface (`c` indicates client), and the value is the measurement value.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_latency</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_min_latency"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_min_latency">[docs]</a>    <span class="k">def</span> <span class="nf">get_min_latency</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the minimum latency measured on each of the interfaces</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the maximum latency, where the key is the measurement interface (`c` indicates client), and the value is the measurement value.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_min_latency</span>
+
+        
+</div>
+<div class="viewcode-block" id="CTRexResult.get_jitter_latency"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_jitter_latency">[docs]</a>    <span class="k">def</span> <span class="nf">get_jitter_latency</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the jitter latency measured on each of the interfaces from the start of TRex run</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the average latency, where the key is the measurement interface (`c` indicates client), and the value is the measurement value.</span>
+
+<span class="sd">            The `all` key represents the average of all interfaces&#39; average</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jitter_latency</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_avg_latency"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_avg_latency">[docs]</a>    <span class="k">def</span> <span class="nf">get_avg_latency</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the average latency measured on each of the interfaces from the start of TRex run</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the average latency, where the key is the measurement interface (`c` indicates client), and the value is the measurement value.</span>
+
+<span class="sd">            The `all` key represents the average of all interfaces&#39; average</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_avg_latency</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_avg_window_latency"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_avg_window_latency">[docs]</a>    <span class="k">def</span> <span class="nf">get_avg_window_latency</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the average latency measured on each of the interfaces from all the sampled currently stored in window.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            dictionary containing the average latency, where the key is the measurement interface (`c` indicates client), and the value is the measurement value.</span>
+
+<span class="sd">            The `all` key represents the average of all interfaces&#39; average</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_avg_window_latency</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_total_drops"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_total_drops">[docs]</a>    <span class="k">def</span> <span class="nf">get_total_drops</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the total number of drops identified from the moment TRex run began.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            total drops count (as int)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total_drops</span>
+    </div>
+<div class="viewcode-block" id="CTRexResult.get_drop_rate"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_drop_rate">[docs]</a>    <span class="k">def</span> <span class="nf">get_drop_rate</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches the most recent drop rate in pkts/sec units.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            current drop rate (as float)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_drop_rate</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.is_valid_hist"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.is_valid_hist">[docs]</a>    <span class="k">def</span> <span class="nf">is_valid_hist</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if result obejct contains valid data.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if history is valid.</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.set_valid_hist"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.set_valid_hist">[docs]</a>    <span class="k">def</span> <span class="nf">set_valid_hist</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">valid_stat</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sets result obejct validity status.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            valid_stat : bool</span>
+<span class="sd">                defines the validity status</span>
+
+<span class="sd">                dafault value : **True**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="n">valid_stat</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.is_done_warmup"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.is_done_warmup">[docs]</a>    <span class="k">def</span> <span class="nf">is_done_warmup</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Checks if TRex latest results TX-rate indicates that TRex has reached its expected TX-rate.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + **True** if expected TX-rate has been reached.</span>
+<span class="sd">            + **False** otherwise.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done_warmup</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_last_value"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_last_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_last_value</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_path_to_key</span><span class="p">,</span> <span class="n">regex</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A dynamic getter from the latest sampled data item stored in the result object.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            tree_path_to_key : str</span>
+<span class="sd">                defines a path to desired data. </span>
+
+<span class="sd">                .. tip:: | Use &#39;.&#39; to enter one level deeper in dictionary hierarchy. </span>
+<span class="sd">                         | Use &#39;[i]&#39; to access the i&#39;th indexed object of an array.</span>
+
+<span class="sd">            regex : regex</span>
+<span class="sd">                apply a regex to filter results out from a multiple results set.</span>
+
+<span class="sd">                Filter applies only on keys of dictionary type.</span>
+
+<span class="sd">                dafault value : **None**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + a list of values relevant to the specified path</span>
+<span class="sd">            + None if no results were fetched or the history isn&#39;t valid.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_valid_hist</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">tree_path_to_key</span><span class="p">,</span> <span class="n">regex</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_value_list"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_value_list">[docs]</a>    <span class="k">def</span> <span class="nf">get_value_list</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_path_to_key</span><span class="p">,</span> <span class="n">regex</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">filter_none</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A dynamic getter from all sampled data items stored in the result object.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            tree_path_to_key : str</span>
+<span class="sd">                defines a path to desired data. </span>
+
+<span class="sd">                .. tip:: | Use &#39;.&#39; to enter one level deeper in dictionary hierarchy. </span>
+<span class="sd">                         | Use &#39;[i]&#39; to access the i&#39;th indexed object of an array.</span>
+
+<span class="sd">            regex : regex</span>
+<span class="sd">                apply a regex to filter results out from a multiple results set.</span>
+
+<span class="sd">                Filter applies only on keys of dictionary type.</span>
+
+<span class="sd">                dafault value : **None**</span>
+
+<span class="sd">            filter_none : bool</span>
+<span class="sd">                specify if None results should be filtered out or not.</span>
+
+<span class="sd">                dafault value : **True**</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + a list of values relevant to the specified path. Each item on the list refers to a single server sample.</span>
+<span class="sd">            + None if no results were fetched or the history isn&#39;t valid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_valid_hist</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">raw_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">tree_path_to_key</span><span class="p">,</span> <span class="n">regex</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">)</span> <span class="p">)</span>
+            <span class="k">if</span> <span class="n">filter_none</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">list</span> <span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">!=</span><span class="bp">None</span><span class="p">,</span> <span class="n">raw_list</span><span class="p">)</span> <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">raw_list</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_latest_dump"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_latest_dump">[docs]</a>    <span class="k">def</span> <span class="nf">get_latest_dump</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A  getter to the latest sampled data item stored in the result object.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + a dictionary of the latest data item</span>
+<span class="sd">            + an empty dictionary if history is empty.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="p">{}</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.get_ports_count"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_ports_count">[docs]</a>    <span class="k">def</span> <span class="nf">get_ports_count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns number of ports based on TRex result</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            + number of ports in TRex result</span>
+<span class="sd">            + -1 if history is empty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">):</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_last_value</span><span class="p">(</span><span class="s">&#39;trex-global.data&#39;</span><span class="p">,</span> <span class="s">&#39;opackets-\d+&#39;</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="CTRexResult.update_result_data"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.update_result_data">[docs]</a>    <span class="k">def</span> <span class="nf">update_result_data</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latest_dump</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Integrates a `latest_dump` dictionary into the CTRexResult object.</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            latest_dump : dict</span>
+<span class="sd">                a dictionary with the items desired to be integrated into the object history and stats</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># add latest dump to history</span>
+        <span class="k">if</span> <span class="n">latest_dump</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">valid</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">valid</span> <span class="o">=</span> <span class="bp">True</span> 
+
+            <span class="c"># parse important fields and calculate averages and others</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># get the expected data only once since it doesn&#39;t change</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span> <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">,</span> <span class="s">&quot;trex-global.data&quot;</span><span class="p">,</span> <span class="s">&quot;m_tx_expected_\w+&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_tx_rate</span> <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">,</span> <span class="s">&quot;trex-global.data&quot;</span><span class="p">,</span> <span class="s">&quot;m_tx_(?!expected_)\w+&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_done_warmup</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># check for up to 4% change between expected and actual</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_tx_rate</span><span class="p">[</span><span class="s">&#39;m_tx_bps&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_max</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span><span class="p">[</span><span class="s">&#39;m_tx_expected_bps&#39;</span><span class="p">]):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_done_warmup</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="n">latest_dump</span><span class="p">[</span><span class="s">&#39;warmup_barrier&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+
+            <span class="c"># handle latency data</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">latency_checked</span><span class="p">:</span>
+                <span class="c"># fix typos, by &quot;pointer&quot;</span>
+                <span class="k">if</span> <span class="s">&#39;trex-latecny-v2&#39;</span> <span class="ow">in</span> <span class="n">latest_dump</span> <span class="ow">and</span> <span class="s">&#39;trex-latency-v2&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">latest_dump</span><span class="p">:</span>
+                    <span class="n">latest_dump</span><span class="p">[</span><span class="s">&#39;trex-latency-v2&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">latest_dump</span><span class="p">[</span><span class="s">&#39;trex-latecny-v2&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="s">&#39;trex-latecny&#39;</span> <span class="ow">in</span> <span class="n">latest_dump</span> <span class="ow">and</span> <span class="s">&#39;trex-latency&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">latest_dump</span><span class="p">:</span>
+                    <span class="n">latest_dump</span><span class="p">[</span><span class="s">&#39;trex-latency&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">latest_dump</span><span class="p">[</span><span class="s">&#39;trex-latecny&#39;</span><span class="p">]</span>
+
+                <span class="n">latency_per_port</span>         <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_last_value</span><span class="p">(</span><span class="s">&quot;trex-latency-v2.data&quot;</span><span class="p">,</span> <span class="s">&quot;port-&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_max_latency</span>        <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_filtered_max_latency</span><span class="p">(</span><span class="n">latency_per_port</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filtered_latency_amount</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_min_latency</span>        <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_filtered_min_latency</span><span class="p">(</span><span class="n">latency_per_port</span><span class="p">)</span> 
+                <span class="n">avg_latency</span>              <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_last_value</span><span class="p">(</span><span class="s">&quot;trex-latency.data&quot;</span><span class="p">,</span> <span class="s">&quot;avg-&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_avg_latency</span>        <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__avg_all_and_rename_keys</span><span class="p">(</span><span class="n">avg_latency</span><span class="p">)</span>
+                <span class="n">jitter_latency</span>           <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_last_value</span><span class="p">(</span><span class="s">&quot;trex-latency.data&quot;</span><span class="p">,</span> <span class="s">&quot;jitter-&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_jitter_latency</span>        <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__avg_all_and_rename_keys</span><span class="p">(</span><span class="n">jitter_latency</span><span class="p">)</span>
+                <span class="n">avg_win_latency_list</span>     <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_value_list</span><span class="p">(</span><span class="s">&quot;trex-latency.data&quot;</span><span class="p">,</span> <span class="s">&quot;avg-&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_avg_window_latency</span> <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__calc_latency_win_stats</span><span class="p">(</span><span class="n">avg_win_latency_list</span><span class="p">)</span>
+
+            <span class="n">tx_pkts</span> <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">,</span> <span class="s">&quot;trex-global.data.m_total_tx_pkts&quot;</span><span class="p">)</span>
+            <span class="n">rx_pkts</span> <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">,</span> <span class="s">&quot;trex-global.data.m_total_rx_pkts&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tx_pkts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">rx_pkts</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_total_drops</span> <span class="o">=</span> <span class="n">tx_pkts</span> <span class="o">-</span> <span class="n">rx_pkts</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_drop_rate</span>   <span class="o">=</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">latest_dump</span><span class="p">,</span> <span class="s">&quot;trex-global.data.m_rx_drop_bps&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CTRexResult.clear_results"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.clear_results">[docs]</a>    <span class="k">def</span> <span class="nf">clear_results</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Clears all results and sets the history&#39;s validity to `False`</span>
+
+<span class="sd">        :parameters:        </span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">valid</span>               <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_done_warmup</span>        <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_expected_tx_rate</span>   <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_tx_rate</span>    <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_latency</span>        <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_min_latency</span>        <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_avg_latency</span>        <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jitter_latency</span>     <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_avg_window_latency</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_total_drops</span>        <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_drop_rate</span>          <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+</div>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__get_value_by_path</span> <span class="p">(</span><span class="n">dct</span><span class="p">,</span> <span class="n">tree_path</span><span class="p">,</span> <span class="n">regex</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="s">r&#39;(\d+)|([\w|-]+)&#39;</span><span class="p">,</span> <span class="n">tree_path</span><span class="p">):</span>
+                <span class="n">dct</span> <span class="o">=</span> <span class="n">dct</span><span class="p">[</span><span class="n">p</span> <span class="ow">or</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="n">regex</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dct</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">val</span> <span class="ow">in</span> <span class="n">dct</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">regex</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
+                        <span class="n">res</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">val</span>
+                <span class="k">return</span> <span class="n">res</span>
+            <span class="k">else</span><span class="p">:</span>
+               <span class="k">return</span> <span class="n">dct</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__calc_latency_win_stats</span> <span class="p">(</span><span class="n">latency_win_list</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;all&#39;</span> <span class="p">:</span> <span class="bp">None</span> <span class="p">}</span>
+        <span class="n">port_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;all&#39;</span> <span class="p">:</span> <span class="p">[]}</span>
+        <span class="nb">list</span><span class="p">(</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">CTRexResult</span><span class="o">.</span><span class="n">__update_port_dict</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">port_dict</span><span class="p">),</span> <span class="n">latency_win_list</span><span class="p">)</span> <span class="p">)</span>
+
+        <span class="c"># finally, calculate everages for each list</span>
+        <span class="n">res</span><span class="p">[</span><span class="s">&#39;all&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%.3f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">port_dict</span><span class="p">[</span><span class="s">&#39;all&#39;</span><span class="p">])</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">port_dict</span><span class="p">[</span><span class="s">&#39;all&#39;</span><span class="p">])))</span> <span class="p">)</span>
+        <span class="n">port_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;all&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">port</span><span class="p">,</span> <span class="n">avg_list</span> <span class="ow">in</span> <span class="n">port_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">res</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%.3f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">avg_list</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">avg_list</span><span class="p">)))</span> <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__update_port_dict</span> <span class="p">(</span><span class="n">src_avg_dict</span><span class="p">,</span> <span class="n">dest_port_dict</span><span class="p">):</span>
+        <span class="n">all_list</span> <span class="o">=</span> <span class="n">src_avg_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">dest_port_dict</span><span class="p">[</span><span class="s">&#39;all&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">all_list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">src_avg_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">reg_res</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;avg-(\d+)&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reg_res</span><span class="p">:</span>
+                <span class="n">tmp_key</span> <span class="o">=</span> <span class="s">&quot;port&quot;</span><span class="o">+</span><span class="n">reg_res</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">tmp_key</span> <span class="ow">in</span> <span class="n">dest_port_dict</span><span class="p">:</span>
+                    <span class="n">dest_port_dict</span><span class="p">[</span><span class="n">tmp_key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dest_port_dict</span><span class="p">[</span><span class="n">tmp_key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__avg_all_and_rename_keys</span> <span class="p">(</span><span class="n">src_dict</span><span class="p">):</span>
+        <span class="n">res</span>       <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">all_list</span>  <span class="o">=</span> <span class="n">src_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">res</span><span class="p">[</span><span class="s">&#39;all&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%.3f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">all_list</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_list</span><span class="p">)))</span> <span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">src_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">reg_res</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;avg-(\d+)&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reg_res</span><span class="p">:</span>
+                <span class="n">tmp_key</span> <span class="o">=</span> <span class="s">&quot;port&quot;</span><span class="o">+</span><span class="n">reg_res</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">res</span><span class="p">[</span><span class="n">tmp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>  <span class="c"># don&#39;t touch original fields values</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__get_filtered_min_latency</span><span class="p">(</span><span class="n">src_dict</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">src_dict</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">port</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">src_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;port-&#39;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;hist&#39;</span><span class="p">][</span><span class="s">&#39;min_usec&#39;</span><span class="p">]</span>
+                <span class="n">min_port</span> <span class="o">=</span> <span class="s">&#39;min-</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">port</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">min_port</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+        <span class="k">return</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
+
+
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__get_filtered_max_latency</span> <span class="p">(</span><span class="n">src_dict</span><span class="p">,</span> <span class="n">filtered_latency_amount</span> <span class="o">=</span> <span class="mf">0.001</span><span class="p">):</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">src_dict</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">port</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">src_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;port-&#39;</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="n">max_port</span> <span class="o">=</span> <span class="s">&#39;max-</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">port</span><span class="p">[</span><span class="mi">5</span><span class="p">:]</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;hist&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s">&#39;histogram&#39;</span><span class="p">]):</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">max_port</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">continue</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">max_port</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span> <span class="c"># if sum below will not get to filtered amount, use this value</span>
+                <span class="n">sum_high</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s">&#39;histogram&#39;</span><span class="p">]):</span>
+                    <span class="n">sum_high</span> <span class="o">+=</span> <span class="n">elem</span><span class="p">[</span><span class="s">&#39;val&#39;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">sum_high</span> <span class="o">&gt;=</span> <span class="n">filtered_latency_amount</span> <span class="o">*</span> <span class="n">res</span><span class="p">[</span><span class="s">&#39;cnt&#39;</span><span class="p">]:</span>
+                        <span class="n">result</span><span class="p">[</span><span class="n">max_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">elem</span><span class="p">[</span><span class="s">&#39;key&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="s">&#39;5&#39;</span> <span class="o">+</span> <span class="nb">repr</span><span class="p">(</span><span class="n">elem</span><span class="p">[</span><span class="s">&#39;key&#39;</span><span class="p">])[</span><span class="mi">2</span><span class="p">:])</span>
+                        <span class="k">break</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+    <span class="c"># history iterator after warmup period</span>
+    <span class="k">def</span> <span class="nf">_get_steady_state_history_iterator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_done_warmup</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;Warm-up period not finished&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s">&#39;warmup_barrier&#39;</span> <span class="ow">in</span> <span class="n">res</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">steady_state_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)):</span>
+                    <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">[</span><span class="n">steady_state_index</span><span class="p">]</span>
+                <span class="k">return</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="CTRexResult.get_avg_steady_state_value"><a class="viewcode-back" href="../api/client_code.html#trex_client.CTRexResult.get_avg_steady_state_value">[docs]</a>    <span class="k">def</span> <span class="nf">get_avg_steady_state_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tree_path_to_key</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Gets average value after warmup period.</span>
+<span class="sd">        For example: &lt;result object&gt;.get_avg_steady_state_value(&#39;trex-global.data.m_tx_bps&#39;)</span>
+<span class="sd">        Usually more accurate than latest history value.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            tree_path_to_key : str</span>
+<span class="sd">                defines a path to desired data.</span>
+
+<span class="sd">        :return: </span>
+<span class="sd">            average value at steady state</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            Exception in case steady state period was not reached or tree_path_to_key was not found in result.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">values_arr</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__get_value_by_path</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">tree_path_to_key</span><span class="p">)</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_steady_state_history_iterator</span><span class="p">()]</span>
+        <span class="n">values_arr</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">,</span> <span class="n">values_arr</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">values_arr</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;All the keys are None, probably wrong tree_path_to_key: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">tree_path_to_key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">values_arr</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">values_arr</span><span class="p">))</span>
+
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">CTRexClient</span><span class="p">(</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;restarting daemon&#39;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">restart_trex_daemon</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;kill any running&#39;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">kill_all_trexes</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;start&#39;</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">start_stateless</span><span class="p">()</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;sleep&#39;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&#39;done&#39;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-75220362-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+  </body>
+</html>

@@ -1,0 +1,1160 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>TRex Client Module &mdash; TRex Stateless Python API 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Stateless Python API 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="TRex Stateless API Reference" href="index.html" />
+    <link rel="next" title="Traffic profile modules" href="profile_code.html" />
+    <link rel="prev" title="TRex Stateless API Reference" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="profile_code.html" title="Traffic profile modules"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="TRex Stateless API Reference"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="trex-client-module">
+<h1>TRex Client Module<a class="headerlink" href="#trex-client-module" title="Permalink to this headline">¶</a></h1>
+<p>TRex Client is an object to access TRex server. It is per user. Each user can own number of interfaces.
+Multi user can interact with one TRex server each user should own a different set of interfaces.
+The protocol is JSON-RPC2 over ZMQ transport.</p>
+<p>The API has two type of API</p>
+<ol class="arabic simple">
+<li>Normal API</li>
+<li>xx_line:  this api get a line like the Console and parse it and call the low level api</li>
+</ol>
+<p>Example1:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">username</span> <span class="o">=</span> <span class="s">&quot;itay&quot;</span><span class="p">,</span><span class="n">server</span> <span class="o">=</span> <span class="s">&quot;10.0.0.10&quot;</span><span class="p">,</span> <span class="n">verbose_level</span> <span class="o">=</span> <span class="n">LoggerApi</span><span class="o">.</span><span class="n">VERBOSE_HIGH</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="c"># connect to server</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+    <span class="c"># prepare our ports (my machine has 0 &lt;--&gt; 1 with static route)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="c"># add both streams to ports</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">add_streams</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c"># clear the stats before injecting</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">clear_stats</span><span class="p">()</span>
+
+    <span class="n">c</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mult</span> <span class="o">=</span> <span class="s">&quot;5mpps&quot;</span><span class="p">,</span> <span class="n">duration</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="c"># block until done</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">wait_on_traffic</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="stlclient-class">
+<h2>STLClient class<a class="headerlink" href="#stlclient-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_client.STLClient">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_client.</code><code class="descname">STLClient</code><span class="sig-paren">(</span><em>username='hhaim'</em>, <em>server='localhost'</em>, <em>sync_port=4501</em>, <em>async_port=4500</em>, <em>verbose_level=0</em>, <em>logger=None</em>, <em>virtual=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient" title="Permalink to this definition">¶</a></dt>
+<dd><p>TRex Stateless client object- gives operations per TRex/user</p>
+<p>Set the connection setting</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>username <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><blockquote class="first">
+<div><p>the user name, for example imarom</p>
+</div></blockquote>
+<dl class="last docutils">
+<dt>server <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">the server name or ip</p>
+</dd>
+<dt>sync_port <span class="classifier-delimiter">:</span> <span class="classifier">int </span></dt>
+<dd><p class="first last">the RPC port</p>
+</dd>
+<dt>async_port <span class="classifier-delimiter">:</span> <span class="classifier">int </span></dt>
+<dd><p class="first last">the ASYNC port</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="literal-block-wrapper container" id="example">
+<div class="code-block-caption"><span class="caption-text">Example</span><a class="headerlink" href="#example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># connect to local TRex server </span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">()</span>
+
+<span class="c"># connect to remote server trex-remote-server</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">server</span> <span class="o">=</span> <span class="s">&quot;trex-remote-server&quot;</span> <span class="p">)</span>
+
+<span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">server</span> <span class="o">=</span> <span class="s">&quot;10.0.0.10&quot;</span> <span class="p">)</span>
+
+<span class="c"># verbose mode </span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">server</span> <span class="o">=</span> <span class="s">&quot;10.0.0.10&quot;</span><span class="p">,</span> <span class="n">verbose_level</span> <span class="o">=</span> <span class="n">LoggerApi</span><span class="o">.</span><span class="n">VERBOSE_HIGH</span> <span class="p">)</span>
+
+<span class="c"># change user name </span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">username</span> <span class="o">=</span> <span class="s">&quot;root&quot;</span><span class="p">,</span><span class="n">server</span> <span class="o">=</span> <span class="s">&quot;10.0.0.10&quot;</span><span class="p">,</span> <span class="n">verbose_level</span> <span class="o">=</span> <span class="n">LoggerApi</span><span class="o">.</span><span class="n">VERBOSE_HIGH</span> <span class="p">)</span>
+
+<span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_verbose">
+<code class="descname">get_verbose</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_verbose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_verbose" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the verbose mode</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">get the verbose mode as Bool</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.is_all_ports_acquired">
+<code class="descname">is_all_ports_acquired</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.is_all_ports_acquired"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.is_all_ports_acquired" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div>is_all_ports_acquired</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">return  True if all ports are acquired</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.is_connected">
+<code class="descname">is_connected</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.is_connected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.is_connected" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">is_connected</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_connection_info">
+<code class="descname">get_connection_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_connection_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_connection_info" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_server_supported_cmds">
+<code class="descname">get_server_supported_cmds</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_server_supported_cmds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_server_supported_cmds" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_server_version">
+<code class="descname">get_server_version</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_server_version"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_server_version" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_server_system_info">
+<code class="descname">get_server_system_info</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_server_system_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_server_system_info" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_port_count">
+<code class="descname">get_port_count</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_port_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_port_count" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_all_ports">
+<code class="descname">get_all_ports</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_all_ports"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_all_ports" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">none</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">connection dict</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.set_verbose">
+<code class="descname">set_verbose</code><span class="sig-paren">(</span><em>level</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.set_verbose"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.set_verbose" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets verbose level</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>level <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">&#8220;high&#8221;
+&#8220;low&#8221;
+&#8220;normal&#8221;</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.connect">
+<code class="descname">connect</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>def connect(self):</p>
+<blockquote>
+<div><p>Connects to the TRex server</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">parameters:</th><td class="field-body"><p class="first">None</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.disconnect">
+<code class="descname">disconnect</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnects from the server</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>stop_traffic <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">tries to stop traffic before disconnecting</p>
+</dd>
+<dt>release_ports <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">tries to release all the acquired ports</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.acquire">
+<code class="descname">acquire</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.acquire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Acquires ports for executing commands</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+<dt>force <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">force acquire the ports</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.release">
+<code class="descname">release</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.release"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release ports</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.ping">
+<code class="descname">ping</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.ping"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.ping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pings the server</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">None</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.get_active_pgids">
+<code class="descname">get_active_pgids</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.get_active_pgids"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.get_active_pgids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get active group ids</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">None</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>force acquire ports, stop the traffic, remove all streams and clear stats</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.remove_all_streams">
+<code class="descname">remove_all_streams</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.remove_all_streams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.remove_all_streams" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove all streams from port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.add_streams">
+<code class="descname">add_streams</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.add_streams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.add_streams" title="Permalink to this definition">¶</a></dt>
+<dd><p>add a list of streams to port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+<dt>streams: list</dt>
+<dd><p class="first last">streams to attach (or profile)</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">list of stream IDs in order of the stream list</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.remove_streams">
+<code class="descname">remove_streams</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.remove_streams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.remove_streams" title="Permalink to this definition">¶</a></dt>
+<dd><p>remove a list of streams from ports</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+<dt>stream_id_list: list</dt>
+<dd><p class="first last">stream id list to remove</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.start">
+<code class="descname">start</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.start"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>start traffic on port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+<dt>mult <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">multiplier in a form of pps, bps, or line util in %
+examples: &#8220;5kpps&#8221;, &#8220;10gbps&#8221;, &#8220;85%&#8221;, &#8220;32mbps&#8221;</p>
+</dd>
+<dt>force <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">imply stopping the port of active and also
+forces a profile that exceeds the L1 BW</p>
+</dd>
+<dt>duration <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">limit the run for time in seconds
+-1 means unlimited</p>
+</dd>
+<dt>total <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">should the B/W be divided by the ports
+or duplicated for each</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.stop">
+<code class="descname">stop</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.stop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.stop" title="Permalink to this definition">¶</a></dt>
+<dd><p>stop port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute the command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>update traffic on port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+<dt>mult <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">multiplier in a form of pps, bps, or line util in %
+and also with +/-
+examples: &#8220;5kpps+&#8221;, &#8220;10gbps-&#8221;, &#8220;85%&#8221;, &#8220;32mbps&#8221;, &#8220;20%+&#8221;</p>
+</dd>
+<dt>force <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">forces a profile that exceeds the L1 BW</p>
+</dd>
+<dt>total <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">should the B/W be divided by the ports
+or duplicated for each</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.pause">
+<code class="descname">pause</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.pause"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.pause" title="Permalink to this definition">¶</a></dt>
+<dd><p>pause traffic on port(s). works only for ports that are active and all streams are in cont mode</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.resume">
+<code class="descname">resume</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.resume"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.resume" title="Permalink to this definition">¶</a></dt>
+<dd><p>resume traffic on port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.validate">
+<code class="descname">validate</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.validate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>validate port(s) configuration</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><blockquote class="first">
+<div><dl class="docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="last docutils">
+<dt>mult <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">multiplier in a form of pps, bps, or line util in %
+examples: &#8220;5kpps&#8221;, &#8220;10gbps&#8221;, &#8220;85%&#8221;, &#8220;32mbps&#8221;</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="docutils">
+<dt>duration <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd>limit the run for time in seconds
+-1 means unlimited</dd>
+<dt>total <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd>should the B/W be divided by the ports
+or duplicated for each</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.clear_stats">
+<code class="descname">clear_stats</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.clear_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.clear_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>clear stats on port(s)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+<dt>clear_global <span class="classifier-delimiter">:</span> <span class="classifier">bool</span></dt>
+<dd><p class="first last">clear the global stats</p>
+</dd>
+<dt>clear_flow_stats <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">clear the flow stats</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLError</span></code></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.is_traffic_active">
+<code class="descname">is_traffic_active</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.is_traffic_active"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.is_traffic_active" title="Permalink to this definition">¶</a></dt>
+<dd><p>retrun if  specify port(s) has traffic</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLTimeoutError</span></code> - in case timeout has expired</li>
+<li>:exe:&#8217;STLError&#8217;</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.wait_on_traffic">
+<code class="descname">wait_on_traffic</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.wait_on_traffic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.wait_on_traffic" title="Permalink to this definition">¶</a></dt>
+<dd><p>block until specify port(s) traffic has ended</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ports <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">ports to execute command</p>
+</dd>
+<dt>timeout <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">timeout in seconds</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">STLTimeoutError</span></code> - in case timeout has expired</li>
+<li>:exe:&#8217;STLError&#8217;</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.set_port_attr">
+<code class="descname">set_port_attr</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.set_port_attr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.set_port_attr" title="Permalink to this definition">¶</a></dt>
+<dd><p>set port(s) attributes</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">promiscuous - set this to True or False</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.clear_events">
+<code class="descname">clear_events</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.clear_events"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.clear_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>clear all events</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">None</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.connect_line">
+<code class="descname">connect_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.connect_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.connect_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connects to the TRex server</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.start_line">
+<code class="descname">start_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.start_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.start_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start selected traffic in specified ports on TRex</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.stop_line">
+<code class="descname">stop_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.stop_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.stop_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stop active traffic in specified ports on TRex</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.update_line">
+<code class="descname">update_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.update_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.update_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update port(s) speed currently active</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.pause_line">
+<code class="descname">pause_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.pause_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.pause_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pause active traffic in specified ports on TRex</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.resume_line">
+<code class="descname">resume_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.resume_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.resume_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resume active traffic in specified ports on TRex</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.clear_stats_line">
+<code class="descname">clear_stats_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.clear_stats_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.clear_stats_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear cached local statistics</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.show_stats_line">
+<code class="descname">show_stats_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.show_stats_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.show_stats_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch statistics from TRex server by port</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.show_streams_line">
+<code class="descname">show_streams_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.show_streams_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.show_streams_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fetch streams statistics from TRex server by port</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.validate_line">
+<code class="descname">validate_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.validate_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.validate_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>validates port(s) stream configuration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.push_line">
+<code class="descname">push_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.push_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.push_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Push a PCAP file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_client.STLClient.set_port_attr_line">
+<code class="descname">set_port_attr_line</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_client.html#STLClient.set_port_attr_line"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_client.STLClient.set_port_attr_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets port attributes</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="stlclient-snippet">
+<h2>STLClient snippet<a class="headerlink" href="#stlclient-snippet" title="Permalink to this headline">¶</a></h2>
+<p>Example1:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">()</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="c"># connect to server</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+    <span class="c"># prepare our ports (my machine has 0 &lt;--&gt; 1 with static route)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="c"># add both streams to ports</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">add_streams</span><span class="p">(</span><span class="n">s1</span><span class="p">,</span> <span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="c"># clear the stats before injecting</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">clear_stats</span><span class="p">()</span>
+
+    <span class="n">c</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mult</span> <span class="o">=</span> <span class="s">&quot;5mpps&quot;</span><span class="p">,</span> <span class="n">duration</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="c"># block until done</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">wait_on_traffic</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+
+<span class="k">finally</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Example2: wait while doing somthing:</p>
+<div class="highlight-python"><div class="highlight"><pre>c = STLClient()
+try:
+    #connect to server
+    c.connect()
+
+    #..
+
+    c.start(ports = [0, 1], mult = &quot;5mpps&quot;, duration = 10)
+
+    # block until done
+    while True  :
+            # do somthing else
+            os.sleep(1) # sleep for 1 sec
+            # check if the port is still active
+            if c.is_traffic_active(ports = [0, 1])==False
+                    break;
+
+finally:
+    c.disconnect()
+</pre></div>
+</div>
+<p>Example3: Console like:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">simple</span> <span class="p">():</span>
+
+    <span class="c"># create client</span>
+    <span class="c">#verbose_level = LoggerApi.VERBOSE_HIGH  # set to see JSON-RPC commands</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="n">LoggerApi</span><span class="o">.</span><span class="n">VERBOSE_REGULAR</span><span class="p">)</span>
+    <span class="n">passed</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c"># connect to server</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+        <span class="n">my_ports</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c"># prepare our ports</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="n">my_ports</span><span class="p">)</span>
+
+        <span class="k">print</span> <span class="p">(</span><span class="s">&quot; is connected {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">is_connected</span><span class="p">()))</span>
+
+        <span class="k">print</span> <span class="p">(</span><span class="s">&quot; number of ports {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get_port_count</span><span class="p">()))</span>
+        <span class="k">print</span> <span class="p">(</span><span class="s">&quot; acquired_ports {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">get_acquired_ports</span><span class="p">()))</span>
+        <span class="c"># port stats</span>
+        <span class="k">print</span> <span class="n">c</span><span class="o">.</span><span class="n">get_stats</span><span class="p">(</span><span class="n">my_ports</span><span class="p">)</span>
+
+        <span class="c"># port info, mac-addr info, speed</span>
+        <span class="k">print</span> <span class="n">c</span><span class="o">.</span><span class="n">get_port_info</span><span class="p">(</span><span class="n">my_ports</span><span class="p">)</span>
+
+        <span class="n">c</span><span class="o">.</span><span class="n">ping</span><span class="p">()</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;start&quot;</span><span class="p">)</span>
+        <span class="c"># start traffic on port 0,1 each 10mpps</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">start_line</span> <span class="p">(</span><span class="s">&quot; -f ../../../../stl/udp_1pkt_simple.py -m 10mpps --port 0 1 &quot;</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">pause_line</span><span class="p">(</span><span class="s">&quot;--port 0 1&quot;</span><span class="p">);</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">resume_line</span><span class="p">(</span><span class="s">&quot;--port 0 1&quot;</span><span class="p">);</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">update_line</span><span class="p">(</span><span class="s">&quot;--port 0 1 -m 5mpps&quot;</span><span class="p">);</span>   <span class="c"># reduce to 5 mpps</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">);</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">stop_line</span><span class="p">(</span><span class="s">&quot;--port 0 1&quot;</span><span class="p">);</span>  <span class="c"># stop both ports</span>
+
+    <span class="k">except</span> <span class="n">STLError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="n">passed</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">print</span> <span class="n">e</span>
+
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Example4: Load profile from a file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">simple</span> <span class="p">():</span>
+
+  <span class="c"># create client</span>
+  <span class="c">#verbose_level = LoggerApi.VERBOSE_HIGH</span>
+  <span class="n">c</span> <span class="o">=</span> <span class="n">STLClient</span><span class="p">(</span><span class="n">verbose_level</span> <span class="o">=</span> <span class="n">LoggerApi</span><span class="o">.</span><span class="n">VERBOSE_REGULAR</span><span class="p">)</span>
+  <span class="n">passed</span> <span class="o">=</span> <span class="bp">True</span>
+
+  <span class="k">try</span><span class="p">:</span>
+      <span class="c"># connect to server</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+      <span class="n">my_ports</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+
+      <span class="c"># prepare our ports</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="n">my_ports</span><span class="p">)</span>
+
+      <span class="n">profile_file</span> <span class="o">=</span>   <span class="s">&quot;../../../../stl/udp_1pkt_simple.py&quot;</span>   <span class="c"># a traffic profile file</span>
+
+      <span class="k">try</span><span class="p">:</span>                                                    <span class="c"># load a profile</span>
+          <span class="n">profile</span> <span class="o">=</span> <span class="n">STLProfile</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">profile_file</span><span class="p">)</span>
+      <span class="k">except</span> <span class="n">STLError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+          <span class="k">print</span> <span class="n">format_text</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Error while loading profile &#39;{0}&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">profile_file</span><span class="p">),</span> <span class="s">&#39;bold&#39;</span><span class="p">)</span>
+          <span class="k">print</span> <span class="n">e</span><span class="o">.</span><span class="n">brief</span><span class="p">()</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+          <span class="k">return</span>
+
+      <span class="k">print</span> <span class="n">profile</span><span class="o">.</span><span class="n">dump_to_yaml</span><span class="p">()</span>                            <span class="c"># print it as YAML</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">remove_all_streams</span><span class="p">(</span><span class="n">my_ports</span><span class="p">)</span>                          <span class="c"># remove all streams</span>
+
+
+      <span class="n">c</span><span class="o">.</span><span class="n">add_streams</span><span class="p">(</span><span class="n">profile</span><span class="o">.</span><span class="n">get_streams</span><span class="p">(),</span> <span class="n">ports</span> <span class="o">=</span> <span class="n">my_ports</span><span class="p">)</span>  <span class="c"># add them</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">mult</span> <span class="o">=</span> <span class="s">&quot;5mpps&quot;</span><span class="p">,</span> <span class="n">duration</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>  <span class="c"># start for 10 sec</span>
+
+      <span class="c"># block until done</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">wait_on_traffic</span><span class="p">(</span><span class="n">ports</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>                       <span class="c"># wait</span>
+
+
+  <span class="k">finally</span><span class="p">:</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">TRex Client Module</a><ul>
+<li><a class="reference internal" href="#stlclient-class">STLClient class</a></li>
+<li><a class="reference internal" href="#stlclient-snippet">STLClient snippet</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">TRex Stateless API Reference</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="profile_code.html"
+                        title="next chapter">Traffic profile modules</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/client_code.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="profile_code.html" title="Traffic profile modules"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="TRex Stateless API Reference"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

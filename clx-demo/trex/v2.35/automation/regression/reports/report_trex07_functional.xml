@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="1" errors="1" failures="0" skip="0"><testcase classname="nose.failure.Failure" name="runTest" time="0.001"><error type="exceptions.OSError" message="No such file /auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/�stl"><![CDATA[Traceback (most recent call last):
+  File "/usr/cisco/depot/python/lib/python2.7/unittest/case.py", line 329, in run
+    testMethod()
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/external_libs/nose-1.3.4/python2/nose/failure.py", line 42, in runTest
+    raise self.exc_class(self.exc_val)
+OSError: No such file /auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/�stl
+]]></error></testcase></testsuite>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="36" errors="0" failures="0" skip="12"><testcase classname="stateless_tests.stl_general_test.STLBasic_Test" name="test_connectivity" time="0.856"><system-out><![CDATA[Starting TRex... done. (0s)
+Connecting.
+Connected
+Mapping ports.
+Got ports mapping: {'map': {0: 1, 1: 0, 2: 3, 3: 2}, 'bi': [(0, 1), (2, 3)], 'unknown': []}
+]]></system-out></testcase><testcase classname="stateless_tests.stl_benchmark_test.STLBenchmark_Test" name="test_CPU_benchmark" time="254.722"><system-out><![CDATA[
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 64}
+Done (11s), CPU util: 29.26, norm_pps_per_core: 10.16mpps norm_bw_per_core:    5.2Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'stream_count': 10, 'packet_len': 64}
+Done (9s), CPU util: 38.88, norm_pps_per_core:  7.63mpps norm_bw_per_core:    3.9Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'stream_count': 100, 'packet_len': 64}
+Done (8s), CPU util: 56.16, norm_pps_per_core:  5.27mpps norm_bw_per_core:    2.7Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 128}
+Done (11s), CPU util: 20.34, norm_pps_per_core:   8.3mpps norm_bw_per_core:    8.5Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 256}
+Done (3s), CPU util: 12.52, norm_pps_per_core:  6.91mpps norm_bw_per_core:  12.67Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 512}
+Done (7s), CPU util: 7.0746, norm_pps_per_core:  6.62mpps norm_bw_per_core:  26.82Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 1500}
+Done (13s), CPU util: 1.8658, norm_pps_per_core:  8.82mpps norm_bw_per_core:  105.8Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 4000}
+Done (10s), CPU util: 0.9063, norm_pps_per_core:  6.87mpps norm_bw_per_core: 219.11Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'packet_len': 9000}
+Done (23s), CPU util: 0.31496, norm_pps_per_core:   8.8mpps norm_bw_per_core: 633.82Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'stream_count': 10, 'packet_len': 9000}
+Done (11s), CPU util: 0.72554, norm_pps_per_core:  3.82mpps norm_bw_per_core: 274.92Gb/core
+Testing profile stl/udp_for_benchmarks.py, kwargs: {'stream_count': 100, 'packet_len': 9000}
+Done (8s), CPU util: 0.9255, norm_pps_per_core:  2.98mpps norm_bw_per_core: 214.44Gb/core
+Testing profile stl/imix.py, kwargs: {}
+Done (10s), CPU util: 19.8, norm_pps_per_core:   3.3mpps norm_bw_per_core:   9.56Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 64}
+Done (10s), CPU util: 82.54, norm_pps_per_core:   3.6mpps norm_bw_per_core:   1.84Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 128}
+Done (5s), CPU util: 53.42, norm_pps_per_core:  3.08mpps norm_bw_per_core:   3.01Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 256}
+Done (4s), CPU util: 31.84, norm_pps_per_core:  2.77mpps norm_bw_per_core:   5.38Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 512}
+Done (6s), CPU util: 16.7, norm_pps_per_core:  2.79mpps norm_bw_per_core:  11.19Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 1500}
+Done (9s), CPU util: 5.3032, norm_pps_per_core:  3.11mpps norm_bw_per_core:  37.06Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 4000}
+Done (13s), CPU util: 1.6558, norm_pps_per_core:  3.76mpps norm_bw_per_core: 120.13Gb/core
+Testing profile stl/udp_1pkt_tuple_gen.py, kwargs: {'packet_len': 9000}
+Done (14s), CPU util: 0.68046, norm_pps_per_core:  4.07mpps norm_bw_per_core: 293.22Gb/core
+Testing profile stl/pcap.py, kwargs: {'loop_count': 0, 'ipg_usec': 4}
+Done (12s), CPU util: 5.4416, norm_pps_per_core:  9.18mpps norm_bw_per_core:   6.06Gb/core
+Testing profile stl/udp_rand_len_9k.py, kwargs: {}
+Done (8s), CPU util: 2.9564, norm_pps_per_core:  2.02mpps norm_bw_per_core:  66.52Gb/core
+Testing profile stl/hlt/hlt_udp_rand_len_9k.py, kwargs: {}
+Done (6s), CPU util: 2.6946, norm_pps_per_core:   2.1mpps norm_bw_per_core:  72.56Gb/core
+]]></system-out></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_arp_capture" time="0.633"></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_basic_capture" time="0.518"></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_ping_capture" time="9.511"></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_stress_capture" time="22.727"></testcase><testcase classname="stateless_tests.stl_capture_test.STLCapture_Test" name="test_stress_tx_rx" time="12.223"><system-out><![CDATA[
+
+2017-11-26 16:04:32 - [local][warning]   - ?[1mRX core util. is high: 85.1%?[22m
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_all_profiles" time="0.283"><skipped type="unittest.case.SkipTest" message="Can not run on mlx VM currently - see trex-405 for details"><![CDATA[SkipTest: Can not run on mlx VM currently - see trex-405 for details
+]]></skipped><system-out><![CDATA[Skip: Can not run on mlx VM currently - see trex-405 for details
+]]></system-out></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_connect_disconnect" time="0.323"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_cont" time="1.151"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_multi_burst" time="0.644"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_basic_single_burst" time="0.684"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_bpf" time="2.849"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_latency_pause_resume" time="0.700"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_pcap_remote" time="0.543"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_stress_connect_disconnect" time="4.991"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_stress_tx" time="2.233"></testcase><testcase classname="stateless_tests.stl_client_test.STLClient_Test" name="test_tx_from_rx" time="2.093"></testcase><testcase classname="stateless_tests.stl_examples_test.STLExamples_Test" name="test_stl_examples" time="0.007"><skipped type="unittest.case.SkipTest" message="Can not run on mlx VM currently - see trex-405 for details"><![CDATA[SkipTest: Can not run on mlx VM currently - see trex-405 for details
+]]></skipped><system-out><![CDATA[Skip: Can not run on mlx VM currently - see trex-405 for details
+]]></system-out></testcase><testcase classname="stateless_tests.stl_ipv6_test.STLIPv6_Test" name="test_stl_ipv6_ping" time="25.736"><system-out><![CDATA[
+No IPv6 replies in loopback as expected.
+Got no replies from unknown IPv6 as expected.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_ipv6_test.STLIPv6_Test" name="test_stl_ipv6_scan6" time="6.072"><system-out><![CDATA[
+No devices found in loopback as expected.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_syn_attack_multi_cpus" time="0.378"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_syn_attack_multi_cpus, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_syn_attack_multi_cpus, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_syn_attack_multi_cpus, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_syn_attack_single_cpu" time="0.390"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_syn_attack_single_cpu, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_syn_attack_single_cpu, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_syn_attack_single_cpu, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_multi_cpus" time="0.376"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_vm_multi_cpus, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_vm_multi_cpus, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_vm_multi_cpus, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_multi_cpus_cached" time="0.385"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_vm_multi_cpus_cached, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_vm_multi_cpus_cached, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_vm_multi_cpus_cached, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_single_cpu" time="0.384"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_vm_single_cpu, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_vm_single_cpu, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_vm_single_cpu, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_performance_test.STLPerformance_Test" name="test_performance_vm_single_cpu_cached" time="0.375"><skipped type="unittest.case.SkipTest" message="No data in benchmark.yaml for test: test_performance_vm_single_cpu_cached, param: cfg. Skipping."><![CDATA[SkipTest: No data in benchmark.yaml for test: test_performance_vm_single_cpu_cached, param: cfg. Skipping.
+]]></skipped><system-out><![CDATA[Skip: No data in benchmark.yaml for test: test_performance_vm_single_cpu_cached, param: cfg. Skipping.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_1_stream_many_iterations" time="0.221"><skipped type="unittest.case.SkipTest" message="defect dpdk17_11 mlx5"><![CDATA[SkipTest: defect dpdk17_11 mlx5
+]]></skipped><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+Skip: defect dpdk17_11 mlx5
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_9k_stream" time="0.218"><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+SKIP
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_fcs_stream" time="1.338"><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+
+Sending from ports: [0, 1, 2, 3], has latency: True 
+
+Sending from ports: [0, 1, 2, 3], has latency: False 
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_incremental_latency_streams" time="0.220"><skipped type="unittest.case.SkipTest" message="Skip for mlx5_defect_dpdk1711_3"><![CDATA[SkipTest: Skip for mlx5_defect_dpdk1711_3
+]]></skipped><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+Skip: Skip for mlx5_defect_dpdk1711_3
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_multiple_streams" time="3.626"><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+num_latency_streams:128
+num_flow_stat_streams:127
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_multiple_streams_random" time="0.217"><skipped type="unittest.case.SkipTest" message="defect dpdk17_11 mlx5"><![CDATA[SkipTest: defect dpdk17_11 mlx5
+]]></skipped><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+Skip: defect dpdk17_11 mlx5
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_one_stream" time="0.387"><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+
+injecting 1000 packets on port 0
+
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_x710_counters_wraparound" time="0.213"><skipped type="unittest.case.SkipTest" message="Test is only for i40e."><![CDATA[SkipTest: Test is only for i40e.
+]]></skipped><system-out><![CDATA[
+num cores 2 num 9k mbufs 20 num 4k mbufs 20
+Skip: Test is only for i40e.
+]]></system-out></testcase><testcase classname="stateless_tests.stl_services_test.STLServices_Test" name="test_arp_service" time="4.225"></testcase></testsuite>

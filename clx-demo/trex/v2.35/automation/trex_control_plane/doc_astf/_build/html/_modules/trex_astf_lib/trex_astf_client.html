@@ -1,0 +1,1271 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>trex_astf_lib.trex_astf_client &mdash; TRex ASTF Python API 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="TRex ASTF Python API 2.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex ASTF Python API 2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for trex_astf_lib.trex_astf_client</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">.cap_handling</span> <span class="kn">import</span> <span class="n">CPcapReader</span>
+<span class="kn">from</span> <span class="nn">.arg_verify</span> <span class="kn">import</span> <span class="n">ArgVerify</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">.trex_astf_exceptions</span> <span class="kn">import</span> <span class="n">ASTFError</span><span class="p">,</span> <span class="n">ASTFErrorBadParamCombination</span><span class="p">,</span> <span class="n">ASTFErrorMissingParam</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
+
+
+<span class="k">def</span> <span class="nf">listify</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">x</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+
+
+<span class="k">class</span> <span class="nc">_ASTFCapPath</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_pcap_file_path</span><span class="p">(</span><span class="n">pcap_file_name</span><span class="p">):</span>
+        <span class="n">f_path</span> <span class="o">=</span> <span class="n">pcap_file_name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">pcap_file_name</span><span class="p">):</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">_ASTFCapPath</span><span class="o">.</span><span class="n">get_path_relative_to_profile</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">p</span><span class="p">:</span>
+                <span class="n">f_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">p</span><span class="p">),</span> <span class="n">pcap_file_name</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">f_path</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_path_relative_to_profile</span><span class="p">():</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;get_profile&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+
+<span class="k">class</span> <span class="nc">ASTFCmd</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="s">&quot;{0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="k">class</span> <span class="nc">ASTFCmdSend</span><span class="p">(</span><span class="n">ASTFCmd</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buf</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFCmdSend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_buf</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;tx&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;buf_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">buf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_buf</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">buf_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;buf_index&#39;</span><span class="p">]</span>
+
+    <span class="nd">@buf_index.setter</span>
+    <span class="k">def</span> <span class="nf">index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;buf_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+
+    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="s">&quot;{0}(</span><span class="se">\&quot;\&quot;\&quot;</span><span class="s">{1}</span><span class="se">\&quot;\&quot;\&quot;</span><span class="s">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="k">class</span> <span class="nc">ASTFCmdRecv</span><span class="p">(</span><span class="n">ASTFCmd</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_bytes</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFCmdRecv</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;rx&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;min_bytes&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">min_bytes</span>
+
+    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="s">&quot;{0}({1})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;min_bytes&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="k">class</span> <span class="nc">ASTFCmdDelay</span><span class="p">(</span><span class="n">ASTFCmd</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msec</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFCmdDelay</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;delay&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;delay&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msec</span>
+
+
+<span class="k">class</span> <span class="nc">ASTFCmdReset</span><span class="p">(</span><span class="n">ASTFCmd</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFCmdReset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;reset&#39;</span>
+
+
+<div class="viewcode-block" id="ASTFProgram"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProgram">[docs]</a><span class="k">class</span> <span class="nc">ASTFProgram</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">       Emulation L7 program   </span>
+
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            # server commands</span>
+<span class="sd">            prog_s = ASTFProgram()</span>
+<span class="sd">            prog_s.recv(len(http_req))</span>
+<span class="sd">            prog_s.send(http_response)</span>
+<span class="sd">            prog_s.delay(10)</span>
+<span class="sd">            prog_s.reset()</span>
+
+<span class="sd">     &quot;&quot;&quot;</span>
+
+    <span class="k">class</span> <span class="nc">BufferList</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buf_hash</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c"># add, and return index of added buffer</span>
+        <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_buf</span><span class="p">):</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">new_buf</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf_hash</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf_hash</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_buf</span><span class="p">)</span>
+                <span class="n">new_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buf_hash</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_index</span>
+                <span class="k">return</span> <span class="n">new_index</span>
+
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">new_buf</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="p">[</span><span class="n">index</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="n">index</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_buf</span><span class="p">)</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+        <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buf_list</span>
+
+    <span class="n">buf_list</span> <span class="o">=</span> <span class="n">BufferList</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_reset</span><span class="p">():</span>
+        <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">buf_list</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">BufferList</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_to_json</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">buf_list</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">,</span> <span class="n">commands</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  file : string </span>
+<span class="sd">                     pcap file to analyze  </span>
+<span class="sd">                </span>
+<span class="sd">                  side : string </span>
+<span class="sd">                        &quot;c&quot; for client side or &quot;s&quot; for server side </span>
+
+<span class="sd">                  commands   : list</span>
+<span class="sd">                        list of command objects cound be NULL in case you call the API</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;file&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="nb">file</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;commands&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">commands</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFCmd</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;allow_list&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+        <span class="n">side_vals</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;c&quot;</span><span class="p">,</span> <span class="s">&quot;s&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">side</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">side_vals</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;Side must be one of {0}&quot;</span><span class="o">.</span><span class="n">side_vals</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">cap</span> <span class="o">=</span> <span class="n">CPcapReader</span><span class="p">(</span><span class="n">_ASTFCapPath</span><span class="o">.</span><span class="n">get_pcap_file_path</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
+            <span class="n">cap</span><span class="o">.</span><span class="n">analyze</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_p_len</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">payload_len</span>
+            <span class="n">cap</span><span class="o">.</span><span class="n">condense_pkt_data</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_cmds_from_cap</span><span class="p">(</span><span class="n">cap</span><span class="o">.</span><span class="n">pkts</span><span class="p">,</span> <span class="n">side</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">commands</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_set_cmds</span><span class="p">(</span><span class="n">listify</span><span class="p">(</span><span class="n">commands</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">calc_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ASTFProgram.send"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProgram.send">[docs]</a>    <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">buf</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        send (l7_buffer)</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  buf : string </span>
+<span class="sd">                     l7 stream    </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                     <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;buf&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">buf</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">bytes</span><span class="p">,</span> <span class="nb">str</span><span class="p">]}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">()</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_name</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="c"># we support bytes or ascii strings</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">enc_buf</span> <span class="o">=</span> <span class="n">buf</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;ascii&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">UnicodeEncodeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">print</span> <span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;If buf is a string, it must contain only ascii&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">enc_buf</span> <span class="o">=</span> <span class="n">buf</span>
+
+        <span class="n">cmd</span> <span class="o">=</span> <span class="n">ASTFCmdSend</span><span class="p">(</span><span class="n">enc_buf</span><span class="p">)</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">buf_list</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ASTFProgram.recv"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProgram.recv">[docs]</a>    <span class="k">def</span> <span class="nf">recv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        recv (bytes)</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  bytes  : uint32_t </span>
+<span class="sd">                     wait until we receive at least  x number of bytes </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                     <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;bytes&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">()</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_name</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ASTFCmdRecv</span><span class="p">(</span><span class="nb">bytes</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="ASTFProgram.delay"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProgram.delay">[docs]</a>    <span class="k">def</span> <span class="nf">delay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        delay for x usec </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  msec  : float</span>
+<span class="sd">                     delay for this time in usec </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;msec&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">msec</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]}]</span>
+        <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&quot;.&quot;</span> <span class="o">+</span> <span class="n">sys</span><span class="o">.</span><span class="n">_getframe</span><span class="p">()</span><span class="o">.</span><span class="n">f_code</span><span class="o">.</span><span class="n">co_name</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ASTFCmdDelay</span><span class="p">(</span><span class="n">msec</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="ASTFProgram.reset"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProgram.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        for TCP connection send RST to peer </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ASTFCmdReset</span><span class="p">())</span>
+</div>
+    <span class="k">def</span> <span class="nf">_set_cmds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmds</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">cmds</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span> <span class="ow">is</span> <span class="n">ASTFCmdSend</span><span class="p">:</span>
+                <span class="n">cmd</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">buf_list</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">buf</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_cmds_from_cap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cmds</span><span class="p">,</span> <span class="n">init_side</span><span class="p">):</span>
+        <span class="n">new_cmds</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">origin</span> <span class="o">=</span> <span class="n">init_side</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="n">cmds</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">origin</span> <span class="o">==</span> <span class="s">&quot;c&quot;</span><span class="p">:</span>
+                <span class="n">new_cmd</span> <span class="o">=</span> <span class="n">ASTFCmdSend</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+                <span class="n">origin</span> <span class="o">=</span> <span class="s">&quot;s&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">payload</span><span class="p">)</span>
+                <span class="n">new_cmd</span> <span class="o">=</span> <span class="n">ASTFCmdRecv</span><span class="p">(</span><span class="n">l</span> <span class="o">-</span> <span class="mi">5</span><span class="p">)</span>
+                <span class="n">origin</span> <span class="o">=</span> <span class="s">&quot;c&quot;</span>
+            <span class="n">new_cmds</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_cmd</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_cmds</span><span class="p">(</span><span class="n">new_cmds</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]:</span>
+            <span class="n">ret</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">var_name</span><span class="p">):</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;cmd_list = []</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cmd</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;commands&#39;</span><span class="p">]:</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;cmd_list.append({0})</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">dump</span><span class="p">()))</span>
+
+        <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;{0} = {1}()</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">))</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;{0}.set_cmds(cmd_list)</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">var_name</span><span class="p">))</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">payload_len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_p_len</span>
+
+</div>
+<div class="viewcode-block" id="ASTFIPGenDist"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFIPGenDist">[docs]</a><span class="k">class</span> <span class="nc">ASTFIPGenDist</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            ip_gen_c = ASTFIPGenDist(ip_range=[&quot;16.0.0.0&quot;, &quot;16.0.0.255&quot;], distribution=&quot;seq&quot;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span> 
+
+    <span class="n">in_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_to_json</span><span class="p">():</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ASTFIPGenDist</span><span class="o">.</span><span class="n">in_list</span><span class="p">)):</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ASTFIPGenDist</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_reset</span><span class="p">():</span>
+        <span class="n">ASTFIPGenDist</span><span class="o">.</span><span class="n">in_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">class</span> <span class="nc">Inner</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_range</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ip_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_end&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ip_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;distribution&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">distribution</span>
+
+        <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">ip_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_start&#39;</span><span class="p">]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">ip_end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_end&#39;</span><span class="p">]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">distribution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;distribution&#39;</span><span class="p">]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;dir&#39;</span><span class="p">]</span>
+
+        <span class="nd">@direction.setter</span>
+        <span class="k">def</span> <span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;dir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">direction</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">ip_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_offset&#39;</span><span class="p">]</span>
+
+        <span class="nd">@ip_offset.setter</span>
+        <span class="k">def</span> <span class="nf">ip_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_offset</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ip_offset</span>
+
+        <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_range</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Define a ASTFIPGenDist </span>
+
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  ip_range  : list of  min-max ip strings </span>
+
+<span class="sd">                  distribution  : string </span>
+<span class="sd">                      &quot;seq&quot; or &quot;rand&quot;</span>
+<span class="sd">                    </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_range&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_range</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="s">&quot;ip range&quot;</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+        <span class="n">distribution_vals</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;seq&quot;</span><span class="p">,</span> <span class="s">&quot;rand&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">distribution</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">distribution_vals</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;Distribution must be one of {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">distribution_vals</span><span class="p">))</span>
+
+        <span class="n">new_inner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Inner</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="n">ip_range</span><span class="p">,</span> <span class="n">distribution</span><span class="o">=</span><span class="n">distribution</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">new_inner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_inner</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ip_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">ip_start</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ip_end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">ip_end</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">distribution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">distribution</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">direction</span>
+
+    <span class="nd">@direction.setter</span>
+    <span class="k">def</span> <span class="nf">direction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="n">direction</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ip_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">ip_offset</span>
+
+    <span class="nd">@ip_offset.setter</span>
+    <span class="k">def</span> <span class="nf">ip_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_offset</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">ip_offset</span> <span class="o">=</span> <span class="n">ip_offset</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;index&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">}</span>
+
+</div>
+<div class="viewcode-block" id="ASTFIPGenGlobal"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFIPGenGlobal">[docs]</a><span class="k">class</span> <span class="nc">ASTFIPGenGlobal</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            ip_gen_c = ASTFIPGenGlobal(ip_offset=&quot;1.0.0.0&quot;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span> 
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Global properties for IP generator</span>
+
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  ip_offset  : offset for dual mask ports </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_offset&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_offset</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="s">&quot;ip address&quot;</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ip_offset</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ip_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_offset&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ASTFIPGen"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFIPGen">[docs]</a><span class="k">class</span> <span class="nc">ASTFIPGen</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            ip_gen_c = ASTFIPGenDist(ip_range=[&quot;16.0.0.0&quot;, &quot;16.0.0.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen_s = ASTFIPGenDist(ip_range=[&quot;48.0.0.0&quot;, &quot;48.0.255.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen = ASTFIPGen(glob=ASTFIPGenGlobal(ip_offset=&quot;1.0.0.0&quot;),</span>
+<span class="sd">                               dist_client=ip_gen_c,</span>
+<span class="sd">                               dist_server=ip_gen_s)</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dist_client</span><span class="p">,</span> <span class="n">dist_server</span><span class="p">,</span> <span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Define a ASTFIPGen generator </span>
+
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  dist_client  : Client side ASTFIPGenDist  :class:`trex_astf_lib.trex_astf_client.ASTFIPGenDist`</span>
+
+<span class="sd">                  dist_server  : Server side ASTFIPGenDist  :class:`trex_astf_lib.trex_astf_client.ASTFIPGenDist`</span>
+
+<span class="sd">                  glob :  ASTFIPGenGlobal see :class:`trex_astf_lib.trex_astf_client.ASTFIPGenGlobal`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;glob&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">glob</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGenGlobal</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;dist_client&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">dist_client</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGenDist</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;dist_server&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">dist_server</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGenDist</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;dist_client&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist_client</span>
+        <span class="n">dist_client</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="s">&quot;c&quot;</span>
+        <span class="n">dist_client</span><span class="o">.</span><span class="n">ip_offset</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">ip_offset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;dist_server&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dist_server</span>
+        <span class="n">dist_server</span><span class="o">.</span><span class="n">direction</span> <span class="o">=</span> <span class="s">&quot;s&quot;</span>
+        <span class="n">dist_server</span><span class="o">.</span><span class="n">ip_offset</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">ip_offset</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s">&quot;IPGen&quot;</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">ret</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="c"># for future use</span></div>
+<span class="k">class</span> <span class="nc">ASTFCluster</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+
+<div class="viewcode-block" id="ASTFTCPInfo"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFTCPInfo">[docs]</a><span class="k">class</span> <span class="nc">ASTFTCPInfo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            tcp_params = ASTFTCPInfo(window=32768)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">in_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">DEFAULT_WIN</span> <span class="o">=</span> <span class="mi">32768</span>
+    <span class="n">DEFAULT_PORT</span> <span class="o">=</span> <span class="mi">80</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_reset</span><span class="p">():</span>
+        <span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">in_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_to_json</span><span class="p">():</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">in_list</span><span class="p">)):</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="k">class</span> <span class="nc">Inner</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="mi">32768</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">80</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;window&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">window</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;options&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">options</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">port</span>
+
+        <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;window&#39;</span><span class="p">]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;options&#39;</span><span class="p">]</span>
+
+        <span class="nd">@property</span>
+        <span class="k">def</span> <span class="nf">port</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+
+<span class="sd">                  window  : uint32_t </span>
+<span class="sd">                      TCP window size default 32KB</span>
+
+<span class="sd">                  side    : string </span>
+<span class="sd">                        &quot;c&quot; or &quot;s&quot;</span>
+
+<span class="sd">                  file    : string </span>
+<span class="sd">                        pcap file to learn the TCP information, in case given no need for other args</span>
+
+<span class="sd">                  port    :  uint16_t </span>
+<span class="sd">                        destination port </span>
+
+<span class="sd">                  options  : uint16_t </span>
+<span class="sd">                        not used for now </span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">side_vals</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;c&quot;</span><span class="p">,</span> <span class="s">&quot;s&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">side</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">side_vals</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;Side must be one of {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">side_vals</span><span class="p">))</span>
+
+        <span class="n">new_opt</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">new_port</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">new_win</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="nb">file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">cap</span> <span class="o">=</span> <span class="n">CPcapReader</span><span class="p">(</span><span class="n">_ASTFCapPath</span><span class="o">.</span><span class="n">get_pcap_file_path</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
+            <span class="n">cap</span><span class="o">.</span><span class="n">analyze</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">side</span> <span class="o">==</span> <span class="s">&quot;c&quot;</span><span class="p">:</span>
+                <span class="n">new_win</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">c_tcp_win</span>
+                <span class="n">new_opt</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">new_port</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">d_port</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_win</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">s_tcp_win</span>
+                <span class="n">new_opt</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c"># In case of server destination port is the source port received from client</span>
+                <span class="n">new_port</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># can override parameters from file</span>
+        <span class="k">if</span> <span class="n">window</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">new_win</span> <span class="o">=</span> <span class="n">window</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">new_win</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">new_win</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">DEFAULT_WIN</span>
+        <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">new_opt</span> <span class="o">=</span> <span class="n">options</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">new_opt</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">new_opt</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">new_port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">new_port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">new_port</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">DEFAULT_PORT</span>
+
+        <span class="n">new_inner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Inner</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="n">new_win</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="n">new_opt</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">new_port</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">new_inner</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">i</span>
+                <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_inner</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">window</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">window</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">options</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">options</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">port</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">port</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&quot;index&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out</span><span class="p">,</span> <span class="n">var_name</span><span class="p">):</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">window</span>
+        <span class="n">opt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">options</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;{0} = {1}(window={2}, options={3})</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">win</span><span class="p">,</span> <span class="n">opt</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="ASTFAssociationRule"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFAssociationRule">[docs]</a><span class="k">class</span> <span class="nc">ASTFAssociationRule</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            # only port </span>
+<span class="sd">            assoc=ASTFAssociationRule(port=81)</span>
+
+<span class="sd">            # port with range or destination ips </span>
+<span class="sd">            assoc=ASTFAssociationRule(port=81,ip_start=&quot;48.0.0.1&quot;,ip_end=&quot;48.0.0,16&quot;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">ip_start</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ip_end</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  port  : uint16_t </span>
+<span class="sd">                      destination port </span>
+
+<span class="sd">                  ip_start : string </span>
+<span class="sd">                      stop ip range  </span>
+
+<span class="sd">                  ip_end   : string </span>
+<span class="sd">                      stop ip range  </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_start&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_start</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="s">&quot;ip address&quot;</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_end&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_end</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="s">&quot;ip address&quot;</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="k">if</span> <span class="n">ip_start</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ip_start</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ip_end</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_end&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ip_end</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">port</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ASTFAssociation"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFAssociation">[docs]</a><span class="k">class</span> <span class="nc">ASTFAssociation</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            assoc=ASTFAssociationRule(port=81)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rules</span><span class="o">=</span><span class="n">ASTFAssociationRule</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  rules  : ASTFAssociationRule see :class:`trex_astf_lib.trex_astf_client.ASTFAssociationRule`</span>
+<span class="sd">                       rule or rules list</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;rules&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">rules</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFAssociationRule</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">,</span> <span class="s">&quot;allow_list&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">},</span>
+                     <span class="p">]}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">rules</span> <span class="o">=</span> <span class="n">listify</span><span class="p">(</span><span class="n">rules</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">rule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">:</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rule</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">port</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">pass</span>  <span class="c"># exception</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">rules</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">port</span>
+
+</div>
+<span class="k">class</span> <span class="nc">_ASTFTemplateBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="n">program_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">program_hash</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">add_program</span><span class="p">(</span><span class="n">program</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">program</span><span class="o">.</span><span class="n">calc_hash</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_hash</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_hash</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">program</span><span class="p">)</span>
+            <span class="n">prog_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_list</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_hash</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">prog_index</span>
+            <span class="k">return</span> <span class="n">prog_index</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_reset</span><span class="p">():</span>
+        <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_hash</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">class_to_json</span><span class="p">():</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_list</span><span class="p">)):</span>
+            <span class="n">ret</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">program_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">program</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;program_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">add_program</span><span class="p">(</span><span class="n">program</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;program_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;program_index&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="k">class</span> <span class="nc">_ASTFClientTemplate</span><span class="p">(</span><span class="n">_ASTFTemplateBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_gen</span><span class="p">,</span> <span class="n">cluster</span><span class="o">=</span><span class="n">ASTFCluster</span><span class="p">(),</span> <span class="n">program</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_ASTFClientTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">program</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_gen&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ip_gen</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;cluster&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cluster</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">_ASTFClientTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;ip_gen&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ip_gen&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;cluster&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;cluster&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<div class="viewcode-block" id="ASTFTCPClientTemplate"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate">[docs]</a><span class="k">class</span> <span class="nc">ASTFTCPClientTemplate</span><span class="p">(</span><span class="n">_ASTFClientTemplate</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       One manual template</span>
+
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            # client commands</span>
+<span class="sd">            prog_c = ASTFProgram()</span>
+<span class="sd">            prog_c.send(http_req)</span>
+<span class="sd">            prog_c.recv(len(http_response))</span>
+
+
+<span class="sd">            # ip generator</span>
+<span class="sd">            ip_gen_c = ASTFIPGenDist(ip_range=[&quot;16.0.0.0&quot;, &quot;16.0.0.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen_s = ASTFIPGenDist(ip_range=[&quot;48.0.0.0&quot;, &quot;48.0.255.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen = ASTFIPGen(glob=ASTFIPGenGlobal(ip_offset=&quot;1.0.0.0&quot;),</span>
+<span class="sd">                               dist_client=ip_gen_c,</span>
+<span class="sd">                               dist_server=ip_gen_s)</span>
+
+<span class="sd">            tcp_params = ASTFTCPInfo(window=32768)</span>
+
+<span class="sd">            # template</span>
+<span class="sd">            temp_c = ASTFTCPClientTemplate(program=prog_c, tcp_info=tcp_params, ip_gen=ip_gen)</span>
+
+<span class="sd">     &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip_gen</span><span class="p">,</span> <span class="n">cluster</span><span class="o">=</span><span class="n">ASTFCluster</span><span class="p">(),</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">ASTFTCPInfo</span><span class="p">(),</span> <span class="n">program</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">port</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">cps</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  ip_gen  : ASTFIPGen see :class:`trex_astf_lib.trex_astf_client.ASTFIPGen`</span>
+<span class="sd">                       generator </span>
+
+<span class="sd">                  cluster :  ASTFCluster see :class:`trex_astf_lib.trex_astf_client.ASTFCluster`</span>
+
+<span class="sd">                  tcp_info : ASTFTCPInfo see :class:`trex_astf_lib.trex_astf_client.ASTFTCPInfo`</span>
+
+<span class="sd">                  program  : ASTFProgram see :class:`trex_astf_lib.trex_astf_client.ASTFProgram`</span>
+<span class="sd">                        L7 emulation program</span>
+
+<span class="sd">                  port     : uint16_t</span>
+<span class="sd">                        destination port</span>
+
+<span class="sd">                  cps      : float</span>
+<span class="sd">                        New connection per second rate</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_gen&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_gen</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGen</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;cluster&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">cluster</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFCluster</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;tcp_info&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">tcp_info</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFTCPInfo</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;program&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">program</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFProgram</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFTCPClientTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">,</span> <span class="n">cluster</span><span class="o">=</span><span class="n">cluster</span><span class="p">,</span> <span class="n">program</span><span class="o">=</span><span class="n">program</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tcp_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;cps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cps</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">ASTFTCPClientTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;port&#39;</span><span class="p">]</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;cps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;cps&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+</div>
+<div class="viewcode-block" id="ASTFTCPServerTemplate"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate">[docs]</a><span class="k">class</span> <span class="nc">ASTFTCPServerTemplate</span><span class="p">(</span><span class="n">_ASTFTemplateBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       One server side template</span>
+
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            # server commands</span>
+<span class="sd">            prog_s = ASTFProgram()</span>
+<span class="sd">            prog_s.recv(len(http_req))</span>
+<span class="sd">            prog_s.send(http_response)</span>
+
+
+<span class="sd">            # template</span>
+<span class="sd">            temp_s = ASTFTCPServerTemplate(program=prog_s, tcp_info=tcp_params)  # using default association</span>
+
+<span class="sd">     &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">ASTFTCPInfo</span><span class="p">(),</span> <span class="n">program</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">assoc</span><span class="o">=</span><span class="n">ASTFAssociation</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  tcp_info : ASTFTCPInfo see :class:`trex_astf_lib.trex_astf_client.ASTFTCPInfo`</span>
+
+<span class="sd">                  program  : ASTFProgram see :class:`trex_astf_lib.trex_astf_client.ASTFProgram`</span>
+<span class="sd">                        L7 emulation program</span>
+
+<span class="sd">                  assoc    : ASTFAssociation see :class:`trex_astf_lib.trex_astf_client.ASTFAssociation`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;tcp_info&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">tcp_info</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFTCPInfo</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;assoc&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">assoc</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">ASTFAssociation</span><span class="p">,</span> <span class="n">ASTFAssociationRule</span><span class="p">],</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;program&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">program</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFProgram</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">ASTFTCPServerTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">program</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tcp_info</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;assoc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">assoc</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">ASTFTCPServerTemplate</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;tcp_info&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;assoc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;assoc&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">ret</span>
+
+</div>
+<div class="viewcode-block" id="ASTFCapInfo"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFCapInfo">[docs]</a><span class="k">class</span> <span class="nc">ASTFCapInfo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            ASTFCapInfo(file=&quot;../avl/delay_10_http_browsing_0.pcap&quot;,cps=1)</span>
+
+<span class="sd">            ASTFCapInfo(file=&quot;../avl/delay_10_http_browsing_0.pcap&quot;,l7_percent=10.0)</span>
+
+<span class="sd">            ASTFCapInfo(file=&quot;../avl/delay_10_http_browsing_0.pcap&quot;,l7_percent=10.0,port=8080)</span>
+
+<span class="sd">            ASTFCapInfo(file=&quot;../avl/delay_10_http_browsing_0.pcap&quot;,l7_percent=10.0,port=8080,ip_gen=Mygen)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+      
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cps</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">assoc</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ip_gen</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">l7_percent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Define one template information based on pcap file analysis</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  file  : string </span>
+<span class="sd">                      pcap file name. Filesystem directory location is relative to the profile file in case it is not start with /</span>
+
+<span class="sd">                  cps  :  float </span>
+<span class="sd">                       new connection per second rate</span>
+
+<span class="sd">                  assoc :  ASTFAssociation see :class:`trex_astf_lib.trex_astf_client.ASTFAssociation`</span>
+<span class="sd">                       rule for server association in default take the destination port from pcap file</span>
+
+<span class="sd">                  ip_gen  : ASTFIPGen see :class:`trex_astf_lib.trex_astf_client.ASTFIPGen`</span>
+<span class="sd">                      tuple generator for this template </span>
+
+<span class="sd">                  port    : uint16_t </span>
+<span class="sd">                      Override destination port, by default is taken from pcap </span>
+
+<span class="sd">                  l7_percent :  float</span>
+<span class="sd">                        L7 stream bandwidth percent </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;file&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="nb">file</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;assoc&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">assoc</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">ASTFAssociation</span><span class="p">,</span> <span class="n">ASTFAssociationRule</span><span class="p">],</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;ip_gen&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">ip_gen</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGen</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">l7_percent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ASTFErrorBadParamCombination</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;cps&quot;</span><span class="p">,</span> <span class="s">&quot;l7_percent&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">l7_percent</span> <span class="o">=</span> <span class="n">l7_percent</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cps</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cps</span> <span class="o">=</span> <span class="n">cps</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cps</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">l7_percent</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="nb">file</span>
+        <span class="k">if</span> <span class="n">assoc</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">assoc</span><span class="p">)</span> <span class="ow">is</span> <span class="n">ASTFAssociationRule</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assoc</span> <span class="o">=</span> <span class="n">ASTFAssociation</span><span class="p">(</span><span class="n">assoc</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assoc</span> <span class="o">=</span> <span class="n">assoc</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assoc</span> <span class="o">=</span> <span class="n">ASTFAssociation</span><span class="p">(</span><span class="n">ASTFAssociationRule</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assoc</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ip_gen</span>
+
+</div>
+<div class="viewcode-block" id="ASTFTemplate"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFTemplate">[docs]</a><span class="k">class</span> <span class="nc">ASTFTemplate</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       One manual template</span>
+
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            # client commands</span>
+<span class="sd">            prog_c = ASTFProgram()</span>
+<span class="sd">            prog_c.send(http_req)</span>
+<span class="sd">            prog_c.recv(len(http_response))</span>
+<span class="sd">    </span>
+<span class="sd">            prog_s = ASTFProgram()</span>
+<span class="sd">            prog_s.recv(len(http_req))</span>
+<span class="sd">            prog_s.send(http_response)</span>
+<span class="sd">    </span>
+<span class="sd">            # ip generator</span>
+<span class="sd">            ip_gen_c = ASTFIPGenDist(ip_range=[&quot;16.0.0.0&quot;, &quot;16.0.0.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen_s = ASTFIPGenDist(ip_range=[&quot;48.0.0.0&quot;, &quot;48.0.255.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen = ASTFIPGen(glob=ASTFIPGenGlobal(ip_offset=&quot;1.0.0.0&quot;),</span>
+<span class="sd">                               dist_client=ip_gen_c,</span>
+<span class="sd">                               dist_server=ip_gen_s)</span>
+<span class="sd">    </span>
+<span class="sd">            tcp_params = ASTFTCPInfo(window=32768)</span>
+<span class="sd">    </span>
+<span class="sd">            # template</span>
+<span class="sd">            temp_c = ASTFTCPClientTemplate(program=prog_c, tcp_info=tcp_params, ip_gen=ip_gen)</span>
+<span class="sd">            temp_s = ASTFTCPServerTemplate(program=prog_s, tcp_info=tcp_params)  # using default association</span>
+<span class="sd">            template = ASTFTemplate(client_template=temp_c, server_template=temp_s)</span>
+
+<span class="sd">     &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client_template</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">server_template</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Define a ASTF profile </span>
+
+<span class="sd">        You should give either templates or cap_list (mutual exclusion). </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  client_template  : ASTFTCPClientTemplate see :class:`trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate`</span>
+<span class="sd">                       client side template info</span>
+
+<span class="sd">                  server_template  :  ASTFTCPServerTemplate see :class:`trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate`</span>
+<span class="sd">                       server side template info</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;client_template&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">client_template</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFTCPClientTemplate</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;server_template&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">server_template</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFTCPServerTemplate</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;client_template&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">client_template</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;server_template&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">server_template</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">ret</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">ret</span>
+
+
+<span class="c"># For future use</span></div>
+<div class="viewcode-block" id="ASTFGlobal"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFGlobal">[docs]</a><span class="k">class</span> <span class="nc">ASTFGlobal</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; ASTFGlobal</span>
+
+<span class="sd">       place holder for future </span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="ASTFProfile"><a class="viewcode-back" href="../../api/profile_code.html#trex_astf_lib.trex_astf_client.ASTFProfile">[docs]</a><span class="k">class</span> <span class="nc">ASTFProfile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; ASTF profile  </span>
+
+<span class="sd">       .. code-block:: python</span>
+
+<span class="sd">            ip_gen_c = ASTFIPGenDist(ip_range=[&quot;16.0.0.0&quot;, &quot;16.0.0.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen_s = ASTFIPGenDist(ip_range=[&quot;48.0.0.0&quot;, &quot;48.0.255.255&quot;], distribution=&quot;seq&quot;)</span>
+<span class="sd">            ip_gen = ASTFIPGen(glob=ASTFIPGenGlobal(ip_offset=&quot;1.0.0.0&quot;),</span>
+<span class="sd">                               dist_client=ip_gen_c,</span>
+<span class="sd">                               dist_server=ip_gen_s)</span>
+<span class="sd">    </span>
+<span class="sd">            return ASTFProfile(default_ip_gen=ip_gen,</span>
+<span class="sd">                                cap_list=[ASTFCapInfo(file=&quot;../avl/delay_10_http_browsing_0.pcap&quot;,cps=1)])</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_ip_gen</span><span class="p">,</span> <span class="n">templates</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">glob</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">cap_list</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Define a ASTF profile </span>
+
+<span class="sd">        You should give either templates or cap_list (mutual exclusion). </span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">                  default_ip_gen  : ASTFIPGen  :class:`trex_astf_lib.trex_astf_client.ASTFIPGen`</span>
+<span class="sd">                       tuple generator object </span>
+
+<span class="sd">                  templates  :  ASTFTemplate see :class:`trex_astf_lib.trex_astf_client.ASTFTemplate`</span>
+<span class="sd">                       define a list of manual templates or one template </span>
+
+<span class="sd">                  glob :  ASTFGlobal see :class:`trex_astf_lib.trex_astf_client.ASTFGlobal`</span>
+<span class="sd">                       global profile information  </span>
+
+<span class="sd">                  cap_list  : ASTFCapInfo see :class:`trex_astf_lib.trex_astf_client.ASTFCapInfo`</span>
+<span class="sd">                      define a list of pcap files list in case there is no  templates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">ver_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;types&quot;</span><span class="p">:</span>
+                    <span class="p">[{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;templates&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">templates</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFTemplate</span><span class="p">,</span> <span class="s">&quot;allow_list&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;glob&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">glob</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFGlobal</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;cap_list&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">cap_list</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFCapInfo</span><span class="p">,</span> <span class="s">&quot;allow_list&quot;</span><span class="p">:</span> <span class="bp">True</span><span class="p">,</span> <span class="s">&quot;must&quot;</span><span class="p">:</span> <span class="bp">False</span><span class="p">},</span>
+                     <span class="p">{</span><span class="s">&quot;name&quot;</span><span class="p">:</span> <span class="s">&quot;default_ip_gen&quot;</span><span class="p">,</span> <span class="s">&#39;arg&#39;</span><span class="p">:</span> <span class="n">default_ip_gen</span><span class="p">,</span> <span class="s">&quot;t&quot;</span><span class="p">:</span> <span class="n">ASTFIPGen</span><span class="p">}]</span>
+                    <span class="p">}</span>
+        <span class="n">ArgVerify</span><span class="o">.</span><span class="n">verify</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">ver_args</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cap_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">templates</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ASTFErrorBadParamCombination</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;templates&quot;</span><span class="p">,</span> <span class="s">&quot;cap_list&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cap_list</span> <span class="o">=</span> <span class="n">listify</span><span class="p">(</span><span class="n">cap_list</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">templates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">templates</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ASTFErrorMissingParam</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="s">&quot;templates&quot;</span><span class="p">,</span> <span class="s">&quot;cap_list&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">templates</span> <span class="o">=</span> <span class="n">listify</span><span class="p">(</span><span class="n">templates</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cap_list</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">all_cap_info</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">d_ports</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">total_payload</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">cap</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cap_list</span><span class="p">:</span>
+                <span class="n">cap_file</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">file</span>
+                <span class="n">ip_gen</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">ip_gen</span> <span class="k">if</span> <span class="n">cap</span><span class="o">.</span><span class="n">ip_gen</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">default_ip_gen</span>
+                <span class="n">prog_c</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">cap_file</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">)</span>
+                <span class="n">prog_s</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">cap_file</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;s&quot;</span><span class="p">)</span>
+                <span class="n">tcp_c</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">cap_file</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">)</span>
+                <span class="n">tcp_s</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="n">cap_file</span><span class="p">,</span> <span class="n">side</span><span class="o">=</span><span class="s">&quot;s&quot;</span><span class="p">)</span>
+                <span class="n">cps</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">cps</span>
+                <span class="n">l7_percent</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">l7_percent</span>
+                <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">l7_percent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">mode</span> <span class="o">=</span> <span class="s">&quot;l7_percent&quot;</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">mode</span> <span class="o">=</span> <span class="s">&quot;cps&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&quot;l7_percent&quot;</span> <span class="ow">and</span> <span class="n">l7_percent</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;If one cap specifies l7_percent, then all should specify it&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="s">&quot;cps&quot;</span> <span class="ow">and</span> <span class="n">l7_percent</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;Can&#39;t mix specifications of cps and l7_percent in same cap list&quot;</span><span class="p">)</span>
+
+                <span class="n">total_payload</span> <span class="o">+=</span> <span class="n">prog_c</span><span class="o">.</span><span class="n">payload_len</span>
+                <span class="k">if</span> <span class="n">cap</span><span class="o">.</span><span class="n">assoc</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">d_port</span> <span class="o">=</span> <span class="n">tcp_c</span><span class="o">.</span><span class="n">port</span>
+                    <span class="n">my_assoc</span> <span class="o">=</span> <span class="n">ASTFAssociation</span><span class="p">(</span><span class="n">rules</span><span class="o">=</span><span class="n">ASTFAssociationRule</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">d_port</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">d_port</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">assoc</span><span class="o">.</span><span class="n">port</span>
+                    <span class="n">my_assoc</span> <span class="o">=</span> <span class="n">cap</span><span class="o">.</span><span class="n">assoc</span>
+                <span class="k">if</span> <span class="n">d_port</span> <span class="ow">in</span> <span class="n">d_ports</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;More than one cap use dest port {0}. This is currently not supported.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">d_port</span><span class="p">))</span>
+                <span class="n">d_ports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_port</span><span class="p">)</span>
+
+                <span class="n">all_cap_info</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s">&quot;ip_gen&quot;</span><span class="p">:</span> <span class="n">ip_gen</span><span class="p">,</span> <span class="s">&quot;prog_c&quot;</span><span class="p">:</span> <span class="n">prog_c</span><span class="p">,</span> <span class="s">&quot;prog_s&quot;</span><span class="p">:</span> <span class="n">prog_s</span><span class="p">,</span> <span class="s">&quot;tcp_c&quot;</span><span class="p">:</span> <span class="n">tcp_c</span><span class="p">,</span> <span class="s">&quot;tcp_s&quot;</span><span class="p">:</span> <span class="n">tcp_s</span><span class="p">,</span>
+                                     <span class="s">&quot;cps&quot;</span><span class="p">:</span> <span class="n">cps</span><span class="p">,</span> <span class="s">&quot;d_port&quot;</span><span class="p">:</span> <span class="n">d_port</span><span class="p">,</span> <span class="s">&quot;my_assoc&quot;</span><span class="p">:</span> <span class="n">my_assoc</span><span class="p">})</span>
+
+            <span class="c"># calculate cps from l7 percent</span>
+            <span class="k">if</span> <span class="n">mode</span> <span class="o">==</span> <span class="s">&quot;l7_percent&quot;</span><span class="p">:</span>
+                <span class="n">percent_sum</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">all_cap_info</span><span class="p">:</span>
+                    <span class="n">c</span><span class="p">[</span><span class="s">&quot;cps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s">&quot;prog_c&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">payload_len</span> <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">total_payload</span>
+                    <span class="n">percent_sum</span> <span class="o">+=</span> <span class="n">c</span><span class="p">[</span><span class="s">&quot;cps&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">percent_sum</span> <span class="o">!=</span> <span class="mi">100</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ASTFError</span><span class="p">(</span><span class="s">&quot;l7_percent values must sum up to 100&quot;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">all_cap_info</span><span class="p">:</span>
+                <span class="n">temp_c</span> <span class="o">=</span> <span class="n">ASTFTCPClientTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;prog_c&quot;</span><span class="p">],</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;tcp_c&quot;</span><span class="p">],</span> <span class="n">ip_gen</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;ip_gen&quot;</span><span class="p">],</span> <span class="n">port</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;d_port&quot;</span><span class="p">],</span>
+                                               <span class="n">cps</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;cps&quot;</span><span class="p">])</span>
+                <span class="n">temp_s</span> <span class="o">=</span> <span class="n">ASTFTCPServerTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;prog_s&quot;</span><span class="p">],</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;tcp_s&quot;</span><span class="p">],</span> <span class="n">assoc</span><span class="o">=</span><span class="n">c</span><span class="p">[</span><span class="s">&quot;my_assoc&quot;</span><span class="p">])</span>
+                <span class="n">template</span> <span class="o">=</span> <span class="n">ASTFTemplate</span><span class="p">(</span><span class="n">client_template</span><span class="o">=</span><span class="n">temp_c</span><span class="p">,</span> <span class="n">server_template</span><span class="o">=</span><span class="n">temp_s</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">templates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">to_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;buf_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="o">.</span><span class="n">class_to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;tcp_info_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="o">.</span><span class="n">class_to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;ip_gen_dist_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="o">.</span><span class="n">class_to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;program_list&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_ASTFTemplateBase</span><span class="o">.</span><span class="n">class_to_json</span><span class="p">()</span>
+        <span class="n">ret</span><span class="p">[</span><span class="s">&#39;templates&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">templates</span><span class="p">)):</span>
+            <span class="n">ret</span><span class="p">[</span><span class="s">&#39;templates&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">templates</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">ret</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;: &#39;</span><span class="p">))</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex ASTF Python API 2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>
