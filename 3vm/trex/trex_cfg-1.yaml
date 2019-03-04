@@ -1,0 +1,60 @@
+- version         : 2.35
+
+  port_limit      : 2
+
+  interfaces      : ["04:00.0","04:00.1"]
+
+  memory          :
+
+      mbuf_64         : 32760
+
+      mbuf_128        : 8190
+
+      mbuf_256        : 8190
+
+      mbuf_512        : 8190
+
+      mbuf_1024       : 8190
+
+      mbuf_2048       : 4096
+
+      traffic_mbuf_64   : 32760
+
+      traffic_mbuf_128  : 8190
+
+      traffic_mbuf_256  : 8190
+
+      traffic_mbuf_512  : 8190
+
+      traffic_mbuf_1024 : 8190
+
+      traffic_mbuf_2048 : 4096
+
+      dp_flows : 1048576
+
+      global_flows : 10240
+
+ 
+
+  enable_zmq_pub  : true  # enable publisher for stats data
+
+  limit_memory    : 8192
+
+  c               : 12
+
+# for system of 1Gb/sec NIC or VM enable this 
+
+  port_bandwidth_gb : 40  # port bandwidth 10Gb/sec , for VM put here 1 for XL710 put 40
+
+  platform :
+
+        master_thread_id  : 1
+
+        latency_thread_id : 15
+
+        dual_if   :
+
+             - socket   : 0
+
+               threads  : [2,3,4,5,6,7,8,9,10,11,12,13]
+

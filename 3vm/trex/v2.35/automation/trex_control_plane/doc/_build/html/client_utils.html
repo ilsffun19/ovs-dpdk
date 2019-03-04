@@ -1,0 +1,431 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Client Utilities &mdash; TRex Control Plane 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TRex Control Plane 1.7.1 documentation" href="index.html" />
+    <link rel="next" title="TRex Packet Builder" href="packet_generator/index.html" />
+    <link rel="prev" title="TRex JSON Template" href="api/json_fields.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="packet_generator/index.html" title="TRex Packet Builder"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="api/json_fields.html" title="TRex JSON Template"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="client-utilities">
+<h1>Client Utilities<a class="headerlink" href="#client-utilities" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="packet_generator/index.html">TRex Packet Builder</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="packet_generator/examples.html">Packet Builder Usage Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="packet_generator/stream_export.html">Stream Export YAML syntax</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="module-trex_yaml_gen">
+<span id="trex-yaml-generator"></span><h2>TRex YAML generator<a class="headerlink" href="#module-trex_yaml_gen" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_yaml_gen.CTRexYaml">
+<em class="property">class </em><code class="descclassname">trex_yaml_gen.</code><code class="descname">CTRexYaml</code><span class="sig-paren">(</span><em>trex_files_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class functions as a YAML generator according to TRex YAML format.</p>
+<p>CTRexYaml is compatible with both Python 2 and Python 3.</p>
+<p>The initialization of this class creates a CTRexYaml object with <strong>empty</strong> &#8216;cap-info&#8217;, and with default client-server configuration.</p>
+<p>Use class methods to add and assign pcap files and export the data to a YAML file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>trex_files_path <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">a path (on TRex server side) for the pcap files using which TRex can access it.</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.add_pcap_file">
+<code class="descname">add_pcap_file</code><span class="sig-paren">(</span><em>local_pcap_path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.add_pcap_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.add_pcap_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a .pcap file with recorded traffic to the yaml object by linking the file with &#8216;cap-info&#8217; template key fields.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>local_pcap_path <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">a path (on client side) for the pcap file to be added.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li>The index of the inserted item (as int) if item added successfully</li>
+<li>-1 if pcap file already exists in &#8216;cap_info&#8217;.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.dump">
+<code class="descname">dump</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.dump"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>dumps with nice indentation the YAML format of the currently built yaml object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">None</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.dump_as_python_obj">
+<code class="descname">dump_as_python_obj</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.dump_as_python_obj"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.dump_as_python_obj" title="Permalink to this definition">¶</a></dt>
+<dd><p>dumps with nice indentation the pythonic format (dictionaries and lists) of the currently built yaml object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">None</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.get_file_list">
+<code class="descname">get_file_list</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.get_file_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.get_file_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of all files related to the YAML object, including the YAML filename itself.</p>
+<div class="admonition tip">
+<p class="first admonition-title">Tip</p>
+<p class="last">This method is especially useful for listing all the files that should be pushed to TRex server as part of the same yaml selection.</p>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">None</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">a list of filepaths, each is a local client-machine file path.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.get_pcap_idx">
+<code class="descname">get_pcap_idx</code><span class="sig-paren">(</span><em>pcap_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.get_pcap_idx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.get_pcap_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a certain .pcap file has been added into the yaml object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>pcap_name <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">the name of the pcap file to be searched</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li>The index of the pcap file (as int) if exists</li>
+<li>-1 if not exists.</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.set_cap_info_param">
+<code class="descname">set_cap_info_param</code><span class="sig-paren">(</span><em>param</em>, <em>value</em>, <em>seq</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.set_cap_info_param"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.set_cap_info_param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set cap-info parameters&#8217; value of a specific pcap file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>param <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">the name of the parameters to be set.</p>
+</dd>
+<dt>value <span class="classifier-delimiter">:</span> <span class="classifier">int/float</span></dt>
+<dd><p class="first last">the desired value to be set to <cite>param</cite> key.</p>
+</dd>
+<dt>seq <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">an index to the relevant caps array to be changed (index supplied when adding new pcap file, see <a class="reference internal" href="#trex_yaml_gen.CTRexYaml.add_pcap_file" title="trex_yaml_gen.CTRexYaml.add_pcap_file"><code class="xref py py-func docutils literal"><span class="pre">add_pcap_file()</span></code></a>).</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>True</strong> on success</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">IndexError</span></code>, in case an out-of range index was given.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.set_generator_param">
+<code class="descname">set_generator_param</code><span class="sig-paren">(</span><em>param</em>, <em>value</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.set_generator_param"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.set_generator_param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set generator parameters&#8217; value of the yaml object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>param <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">the name of the parameters to be set.</p>
+</dd>
+<dt>value <span class="classifier-delimiter">:</span> <span class="classifier">int/float/str</span></dt>
+<dd><p class="first last">the desired value to be set to <cite>param</cite> key.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_yaml_gen.CTRexYaml.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/trex_yaml_gen.html#CTRexYaml.to_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_yaml_gen.CTRexYaml.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Exports to YAML file the built configuration into an actual YAML file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>filename <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">a path (on client side, including filename) to store the generated yaml file.</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">None</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first last simple">
+<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code>, in case no pcap files has been added to the object.</li>
+<li><code class="xref py py-exc docutils literal"><span class="pre">EnvironmentError</span></code>, in case of any IO error of writing to the files or OSError when trying to open it for writing.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-general_utils">
+<span id="general-utilities"></span><h2>General Utilities<a class="headerlink" href="#module-general_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="general_utils.find_path_to_pardir">
+<code class="descclassname">general_utils.</code><code class="descname">find_path_to_pardir</code><span class="sig-paren">(</span><em>pardir</em>, <em>base_path='/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/trex_control_plane/doc'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/general_utils.html#find_path_to_pardir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#general_utils.find_path_to_pardir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the absolute path for some parent dir <cite>pardir</cite>, starting from base_path</p>
+<p>The request is only valid if the stop initiator is the same client as the TRex run initiator.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>pardir <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first last">name of an upper-level directory to which we want to find an absolute path for</p>
+</dd>
+<dt>base_path <span class="classifier-delimiter">:</span> <span class="classifier">str</span></dt>
+<dd><p class="first">a full (usually nested) path from which we want to find a parent folder.</p>
+<p class="last">default value : <strong>current working dir</strong></p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">string representation of the full path to</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="general_utils.id_count_gen">
+<code class="descclassname">general_utils.</code><code class="descname">id_count_gen</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/general_utils.html#id_count_gen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#general_utils.id_count_gen" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator for creating an increasing id for objects, starting from 0</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">None</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">an id (unsigned int) with each next() request.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="general_utils.random_id_gen">
+<code class="descclassname">general_utils.</code><code class="descname">random_id_gen</code><span class="sig-paren">(</span><em>length=8</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/general_utils.html#random_id_gen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#general_utils.random_id_gen" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generator for creating a random chars id of specific length</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>length <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first">the desired length of the generated id</p>
+<p class="last">default: 8</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">a random id with each next() request.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Client Utilities</a><ul>
+<li><a class="reference internal" href="#module-trex_yaml_gen">TRex YAML generator</a></li>
+<li><a class="reference internal" href="#module-general_utils">General Utilities</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="api/json_fields.html"
+                        title="previous chapter">TRex JSON Template</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="packet_generator/index.html"
+                        title="next chapter">TRex Packet Builder</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/client_utils.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="packet_generator/index.html" title="TRex Packet Builder"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="api/json_fields.html" title="TRex JSON Template"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-75220362-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+  </body>
+</html>

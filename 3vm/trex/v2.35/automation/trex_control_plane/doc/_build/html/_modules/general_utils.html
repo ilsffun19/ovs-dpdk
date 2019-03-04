@@ -1,0 +1,200 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>general_utils &mdash; TRex Control Plane 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Control Plane 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for general_utils</h1><div class="highlight"><pre>
+<span class="c">#!/router/bin/python</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">site</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pwd</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">getpass</span>
+    <span class="n">pwd</span> <span class="o">=</span> <span class="bp">None</span>
+
+<span class="n">using_python_3</span> <span class="o">=</span> <span class="bp">True</span> <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">3</span> <span class="k">else</span> <span class="bp">False</span>
+
+
+<span class="k">def</span> <span class="nf">user_input</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">using_python_3</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">input</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># using python version 2</span>
+        <span class="k">return</span> <span class="nb">raw_input</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">get_current_user</span><span class="p">():</span>
+  <span class="k">if</span> <span class="n">pwd</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">geteuid</span><span class="p">())</span><span class="o">.</span><span class="n">pw_name</span>
+  <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">import_module_list_by_path</span> <span class="p">(</span><span class="n">modules_list</span><span class="p">):</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">modules_list</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">full_path</span> <span class="ow">in</span> <span class="n">modules_list</span><span class="p">:</span>
+        <span class="n">site</span><span class="o">.</span><span class="n">addsitedir</span><span class="p">(</span><span class="n">full_path</span><span class="p">)</span>
+
+<div class="viewcode-block" id="find_path_to_pardir"><a class="viewcode-back" href="../client_utils.html#general_utils.find_path_to_pardir">[docs]</a><span class="k">def</span> <span class="nf">find_path_to_pardir</span> <span class="p">(</span><span class="n">pardir</span><span class="p">,</span> <span class="n">base_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finds the absolute path for some parent dir `pardir`, starting from base_path</span>
+
+<span class="sd">    The request is only valid if the stop initiator is the same client as the TRex run initiator.</span>
+<span class="sd">            </span>
+<span class="sd">    :parameters:        </span>
+<span class="sd">        pardir : str</span>
+<span class="sd">            name of an upper-level directory to which we want to find an absolute path for</span>
+<span class="sd">        base_path : str</span>
+<span class="sd">            a full (usually nested) path from which we want to find a parent folder.</span>
+
+<span class="sd">            default value : **current working dir**</span>
+
+<span class="sd">    :return: </span>
+<span class="sd">        string representation of the full path to </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="n">base_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">components</span><span class="p">[:</span><span class="n">components</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">pardir</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="random_id_gen"><a class="viewcode-back" href="../client_utils.html#general_utils.random_id_gen">[docs]</a><span class="k">def</span> <span class="nf">random_id_gen</span><span class="p">(</span><span class="n">length</span><span class="o">=</span><span class="mi">8</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A generator for creating a random chars id of specific length</span>
+
+<span class="sd">    :parameters:</span>
+<span class="sd">        length : int</span>
+<span class="sd">            the desired length of the generated id</span>
+
+<span class="sd">            default: 8</span>
+
+<span class="sd">    :return:</span>
+<span class="sd">        a random id with each next() request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">id_chars</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">ascii_lowercase</span> <span class="o">+</span> <span class="n">string</span><span class="o">.</span><span class="n">digits</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">return_id</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+            <span class="n">return_id</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">id_chars</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">return_id</span>
+</div>
+<div class="viewcode-block" id="id_count_gen"><a class="viewcode-back" href="../client_utils.html#general_utils.id_count_gen">[docs]</a><span class="k">def</span> <span class="nf">id_count_gen</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A generator for creating an increasing id for objects, starting from 0</span>
+
+<span class="sd">    :parameters:</span>
+<span class="sd">        None</span>
+
+<span class="sd">    :return:</span>
+<span class="sd">        an id (unsigned int) with each next() request.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">return_id</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">return_id</span>
+        <span class="n">return_id</span> <span class="o">+=</span> <span class="mi">1</span>
+
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-75220362-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+  </body>
+</html>

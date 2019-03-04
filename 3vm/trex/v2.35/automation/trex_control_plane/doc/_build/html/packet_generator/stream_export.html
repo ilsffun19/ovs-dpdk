@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Stream Export YAML syntax &mdash; TRex Control Plane 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Control Plane 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="TRex Packet Builder" href="index.html" />
+    <link rel="next" title="Usage Examples" href="../usage_examples.html" />
+    <link rel="prev" title="Packet Builder Usage Examples" href="examples.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../usage_examples.html" title="Usage Examples"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="examples.html" title="Packet Builder Usage Examples"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../client_utils.html" >Client Utilities</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">TRex Packet Builder</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="stream-export-yaml-syntax">
+<h1>Stream Export YAML syntax<a class="headerlink" href="#stream-export-yaml-syntax" title="Permalink to this headline">¶</a></h1>
+<p>In order to provide a fluent work-flow that utilize the best TRex user&#8217;s time, an export-import mini language has been created.</p>
+<p>This enables a work-flow that supports saving and sharing a built packets and its scenarios, so that other tools
+(such as TRex Console) could use them.</p>
+<p>The TRex Packet Builder module supports (using ___ method) the export of built stream according to the format described below.</p>
+<div class="section" id="guidelines">
+<h2>Guidelines<a class="headerlink" href="#guidelines" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li>The YAML file can either contain Byte representation of the packet of refer to a .pcap file that contains it.</li>
+<li>The YAML file is similar as much as possible to the <a class="reference external" href="http://trex-tgn.cisco.com/trex/doc/trex_rpc_server_spec.html#_add_stream">add_stream method</a> of TRex RPC server spec, which defines the raw interaction with TRex server.</li>
+<li>Only packet binary data and VM instructions are to be saved. Any meta-data packet builder module used while creating the packet will be stripped out.</li>
+</ol>
+</div>
+<div class="section" id="export-format">
+<h2>Export Format<a class="headerlink" href="#export-format" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43</pre></div></td><td class="code"><div class="highlight"><pre># PACKET REP - OPTION #1
+packet:
+  is_pcap         : YES/NO                  # &lt;1&gt;
+  binary          : []                      # &lt;2&gt;
+  pcap            : path/to/pcap/file.pcap  # &lt;3&gt;
+  meta            : any metadata wished to  # &lt;4&gt;
+
+# PACKET REP - OPTION #2
+packet:
+  data            : [] / path/to/pcap/file.pcap # &lt;5&gt;
+  meta            : any metadata wished to  # &lt;4&gt;
+
+vm:                                         # &lt;6&gt;
+  - vm instruction #1
+  - vm instruction #2
+  ...
+  - vm instruction #N
+
+
+###################################
+####         Comments          ####
+###################################
+#
+# &lt;1&gt;: is_pcap is a boolean field that indicates if packet is transferred by pcap referencs
+#      (&#39;YES&#39;) or binary representation (&#39;NO&#39;).
+#
+# &lt;2&gt;: binary field encodes the packet in binary representation. in a sequence (array) data.
+#      Each array item is an integer ranging 0-255.
+#      **LEAVE BLANK IF USING PCAP REFERENCE**
+#
+# &lt;3&gt;: path to the linked pcap file. Make sure to provide path with reading credentials.
+#      **LEAVE BLANK IF USING BINARY REP FOR THE PACKET**
+#
+# &lt;4&gt;: meta data is any JSON formatted data ment to be passed on.
+#
+# &lt;5&gt;: data field can be both binary representation or pcap file refernce,
+#      without the need for user&#39;s explicit typing.
+#      The application logic differs between the cases by the object type
+#      (array/string ending in &#39;.pcap&#39;)
+#      Less configuration, little more confusing, LESS similar to RPC spec
+#
+# &lt;6&gt;: vm instructions passed in array representation (sequence).
+#      Each instruction is deifned according to the structures of the supported VM instructions.
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<p>The following files snapshot represents each of the options (Binary/pcap) for the very same HTTP GET request packet.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Stream Export YAML syntax</a><ul>
+<li><a class="reference internal" href="#guidelines">Guidelines</a></li>
+<li><a class="reference internal" href="#export-format">Export Format</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="examples.html"
+                        title="previous chapter">Packet Builder Usage Examples</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../usage_examples.html"
+                        title="next chapter">Usage Examples</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/packet_generator/stream_export.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../usage_examples.html" title="Usage Examples"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="examples.html" title="Packet Builder Usage Examples"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../client_utils.html" >Client Utilities</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >TRex Packet Builder</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-75220362-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+  </body>
+</html>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="2" errors="0" failures="0" skip="0"><testcase classname="stateless_tests.stl_general_test.STLBasic_Test" name="test_connectivity" time="0.783"><system-out><![CDATA[Starting TRex... done. (0s)
+Connecting.
+Connected
+Mapping ports.
+Got ports mapping: {'map': {0: 1, 1: 0}, 'bi': [(0, 1)], 'unknown': []}
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_fcs_stream" time="0.864"><system-out><![CDATA[ test port 0 latency : True 
+ test port 0 latency : False 
+ test port 1 latency : True 
+ test port 1 latency : False 
+]]></system-out></testcase></testsuite>

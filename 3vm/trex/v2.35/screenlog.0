@@ -1,0 +1,41 @@
+stats --port 0 1
+[4m[36mGlobal Statistics[39m[24m
+
+connection   : localhost, Port 4501                  total_tx_L2  : 10.91 Gb/sec [32m▼▼▼[39m               
+version      : v2.35                                 total_tx_L1  : 11.76 Gb/sec [32m▼▼▼[39m               
+cpu_util.    : [32m70.5[39m% @ 12 cores (12 per port)        total_rx     : 2.26 Gb/sec [32m▼▼▼[39m                
+rx_cpu_util. : [32m0.0[39m% / 0.00 pkt/sec                   total_pps    : 5.33 Mpkt/sec [32m▼▼▼[39m              
+async_util.  : [32m0.44[39m% / 1.52 KB/sec                   drop_rate    : [31m8.64 Gb/sec[39m                    
+                                                     queue_full   : [32m0 pkts[39m                         
+
+[4m[36mPort Statistics[39m[24m
+
+   port    |         0         |         1         |       total       
+----------------------------------------------------------------------
+owner      |              [32mroot[39m |              [32mroot[39m |                   
+link       |              [1m[31mDOWN[39m[22m |              [1m[31mDOWN[39m[22m |                   
+state      |      [1m[32mTRANSMITTING[39m[22m |      [1m[32mTRANSMITTING[39m[22m |                   
+speed      |            0 Gb/s |            0 Gb/s |                   
+CPU util.  |             [32m70.5[39m% |             [32m70.5[39m% |                   
+--         |                   |                   |                   
+Tx bps L2  |     [32m▼▼▼[39m 1.15 Gbps |     [32m▼▼▼[39m 9.76 Gbps |    [32m▼▼▼[39m 10.91 Gbps 
+Tx bps L1  |     [32m▼▼▼[39m 1.24 Gbps |    [32m▼▼▼[39m 10.52 Gbps |    [32m▼▼▼[39m 11.76 Gbps 
+Tx pps     |   [32m▼▼▼[39m 562.64 Kpps |     [32m▼▼▼[39m 4.76 Mpps |     [32m▼▼▼[39m 5.33 Mpps 
+Line Util. |               [1m0 %[22m |               [1m0 %[22m |                   
+---        |                   |                   |                   
+Rx bps     |     [32m▼▼▼[39m 1.13 Gbps |     [32m▼▼▼[39m 1.13 Gbps |     [32m▼▼▼[39m 2.26 Gbps 
+Rx pps     |   [32m▼▼▼[39m 552.36 Kpps |   [32m▼▼▼[39m 552.32 Kpps |     [32m▼▼▼[39m 1.10 Mpps 
+----       |                   |                   |                   
+opackets   |     2261677215445 |     2261751793426 |     4523429008871 
+ipackets   |     2220416373251 |     2220533231240 |     4440949604491 
+obytes     |   277598341083264 |   277611103203456 |   555209444286720 
+ibytes     |   267991346418880 |   267997075174912 |   535988421593792 
+opackets   |        2.26 Tpkts |        2.26 Tpkts |        4.52 Tpkts 
+ipackets   |        2.22 Tpkts |        2.22 Tpkts |        4.44 Tpkts 
+obytes     |         277.60 TB |         277.61 TB |         555.21 TB 
+ibytes     |         267.99 TB |         268.00 TB |         535.99 TB 
+-----      |                   |                   |                   
+oerrors    |                 [32m0[39m |                 [32m0[39m |                 [32m0[39m 
+ierrors    |                 [31m2[39m |                 [32m0[39m |                 [31m2[39m 
+
+trex>

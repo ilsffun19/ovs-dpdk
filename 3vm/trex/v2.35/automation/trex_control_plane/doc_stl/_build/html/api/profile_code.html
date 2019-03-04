@@ -1,0 +1,642 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Traffic profile modules &mdash; TRex Stateless Python API 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex Stateless Python API 1.7.1 documentation" href="../index.html" />
+    <link rel="up" title="TRex Stateless API Reference" href="index.html" />
+    <link rel="next" title="Packet builder modules" href="scapy_builder.html" />
+    <link rel="prev" title="TRex Client Module" href="client_code.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="scapy_builder.html" title="Packet builder modules"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="client_code.html" title="TRex Client Module"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="traffic-profile-modules">
+<h1>Traffic profile modules<a class="headerlink" href="#traffic-profile-modules" title="Permalink to this headline">¶</a></h1>
+<p>TRex STLProfile profile include a list of STLStream. The profile is a <code class="docutils literal"><span class="pre">program</span></code> of streams with a relation betwean the streams.
+Each stream can trigger another stream. Stream can be given a name for a full examples see here <a class="reference external" href="../draft_trex_stateless1.html">Manual</a>.</p>
+<p>for example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">create_stream</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="c"># create a base packet and pad it to size</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsize</span> <span class="o">-</span> <span class="mi">4</span><span class="p">;</span> <span class="c"># no FCS</span>
+    <span class="n">base_pkt</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">base_pkt1</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.2&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">base_pkt2</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.3&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_pkt</span><span class="p">))</span> <span class="o">*</span> <span class="s">&#39;x&#39;</span>
+
+
+    <span class="k">return</span> <span class="n">STLProfile</span><span class="p">(</span> <span class="p">[</span> <span class="n">STLStream</span><span class="p">(</span> <span class="n">isg</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="c"># star in delay in usec</span>
+                                    <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">),</span>
+                                    <span class="p">),</span>
+
+                         <span class="n">STLStream</span><span class="p">(</span> <span class="n">isg</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">,</span>
+                                    <span class="n">packet</span>  <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt1</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                    <span class="n">mode</span>    <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">20</span><span class="p">),</span>
+                                    <span class="p">),</span>
+
+                         <span class="n">STLStream</span><span class="p">(</span>  <span class="n">isg</span> <span class="o">=</span> <span class="mf">3.0</span><span class="p">,</span>
+                                     <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt2</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                     <span class="n">mode</span>    <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">30</span><span class="p">)</span>
+
+                                    <span class="p">)</span>
+                        <span class="p">])</span><span class="o">.</span><span class="n">get_streams</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="stlprofile-class">
+<h2>STLProfile class<a class="headerlink" href="#stlprofile-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLProfile</code><span class="sig-paren">(</span><em>streams=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describe a list of streams</p>
+<div class="literal-block-wrapper container" id="stlprofile-example">
+<div class="code-block-caption"><span class="caption-text">STLProfile Example</span><a class="headerlink" href="#stlprofile-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>  <span class="n">profile</span> <span class="o">=</span>  <span class="n">STLProfile</span><span class="p">(</span> <span class="p">[</span> <span class="n">STLStream</span><span class="p">(</span> <span class="n">isg</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span> <span class="c"># star in delay </span>
+                            <span class="n">name</span>    <span class="o">=</span><span class="s">&#39;S0&#39;</span><span class="p">,</span>
+                            <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                            <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">burst_size</span><span class="p">),</span>
+                            <span class="nb">next</span> <span class="o">=</span> <span class="s">&#39;S1&#39;</span><span class="p">),</span> <span class="c"># point to next stream </span>
+
+                 <span class="n">STLStream</span><span class="p">(</span> <span class="n">self_start</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="c"># stream is  disabled enable trow S0</span>
+                            <span class="n">name</span>    <span class="o">=</span><span class="s">&#39;S1&#39;</span><span class="p">,</span>
+                            <span class="n">packet</span>  <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt1</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                            <span class="n">mode</span>    <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">burst_size</span><span class="p">),</span>
+                            <span class="nb">next</span>    <span class="o">=</span> <span class="s">&#39;S2&#39;</span> <span class="p">),</span>
+
+                 <span class="n">STLStream</span><span class="p">(</span>  <span class="n">self_start</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="c"># stream is  disabled enable trow S0</span>
+                             <span class="n">name</span>   <span class="o">=</span><span class="s">&#39;S2&#39;</span><span class="p">,</span>
+                             <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt2</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                             <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">burst_size</span> <span class="p">)</span>
+                            <span class="p">)</span>
+                <span class="p">])</span><span class="o">.</span><span class="n">get_streams</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>streams <span class="classifier-delimiter">:</span> <span class="classifier">list of <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLStream" title="trex_stl_lib.trex_stl_streams.STLStream"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLStream</span></code></a> </span></dt>
+<dd><p class="first last">a list of stream objects</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.get_streams">
+<code class="descname">get_streams</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.get_streams"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.get_streams" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the list of stream</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.load_yaml">
+<em class="property">static </em><code class="descname">load_yaml</code><span class="sig-paren">(</span><em>yaml_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.load_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.load_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from YAML file a profile with number of streams</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.load_py">
+<em class="property">static </em><code class="descname">load_py</code><span class="sig-paren">(</span><em>python_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.load_py"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.load_py" title="Permalink to this definition">¶</a></dt>
+<dd><p>load from Python profile</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.load_pcap">
+<em class="property">static </em><code class="descname">load_pcap</code><span class="sig-paren">(</span><em>pcap_file</em>, <em>ipg_usec=None</em>, <em>speedup=1.0</em>, <em>loop_count=1</em>, <em>vm=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.load_pcap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.load_pcap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a pcap file with a number of packets to a list of connected streams</p>
+<p>packet1-&gt;packet2-&gt;packet3 etc</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">parameters:</th><td class="field-body"><blockquote class="first">
+<div><dl class="docutils">
+<dt>pcap_file <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">The name of the pcap file</p>
+</dd>
+<dt>ipg_usec <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">The inter packet gap in usec. in case of None IPG is taken from pcap file</p>
+</dd>
+<dt>speedup <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">By which factor to get IPG smaller so we will send pcap file in speedup</p>
+</dd>
+<dt>loop_count <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t </span></dt>
+<dd><p class="first last">how many loops to repeat the pcap file</p>
+</dd>
+<dt>vm <span class="classifier-delimiter">:</span> <span class="classifier">list </span></dt>
+<dd><p class="first last">A list of Field engine instructions</p>
+</dd>
+</dl>
+</div></blockquote>
+<table class="last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">return:</th><td class="field-body">STLProfile</td>
+</tr>
+</tbody>
+</table>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.load">
+<em class="property">static </em><code class="descname">load</code><span class="sig-paren">(</span><em>filename</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.load"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>load a profile by its type supported type are 
+* py
+* yaml 
+* pcap file that converted to profile automaticly</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">filename : string as filename</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.dump_as_pkt">
+<code class="descname">dump_as_pkt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.dump_as_pkt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.dump_as_pkt" title="Permalink to this definition">¶</a></dt>
+<dd><p>dump the profile as scapy packet. in case it is raw convert to scapy and dump it</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.dump_to_yaml">
+<code class="descname">dump_to_yaml</code><span class="sig-paren">(</span><em>yaml_file=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.dump_to_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.dump_to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert it to yaml</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLProfile.dump_to_code">
+<code class="descname">dump_to_code</code><span class="sig-paren">(</span><em>profile_file=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLProfile.dump_to_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLProfile.dump_to_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert it to Python native profile. yeah this is cool</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="stlstream">
+<h2>STLStream<a class="headerlink" href="#stlstream" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLStream</code><span class="sig-paren">(</span><em>name=None</em>, <em>packet=None</em>, <em>mode=&lt;trex_stl_lib.trex_stl_streams.STLTXCont object&gt;</em>, <em>enabled=True</em>, <em>self_start=True</em>, <em>isg=0.0</em>, <em>flow_stats=None</em>, <em>next=None</em>, <em>stream_id=None</em>, <em>action_count=0</em>, <em>random_seed=0</em>, <em>mac_src_override_by_pkt=None</em>, <em>mac_dst_override_mode=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream" title="Permalink to this definition">¶</a></dt>
+<dd><p>One stream object, include mode, Field Engine mode packet template and Rx stats</p>
+<div class="literal-block-wrapper container" id="stlstream-example">
+<div class="code-block-caption"><span class="caption-text">STLStream Example</span><a class="headerlink" href="#stlstream-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">base_pkt</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+<span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_pkt</span><span class="p">))</span> <span class="o">*</span> <span class="s">&#39;x&#39;</span>
+
+<span class="n">STLStream</span><span class="p">(</span> <span class="n">isg</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span> <span class="c"># star in delay </span>
+           <span class="n">name</span>    <span class="o">=</span><span class="s">&#39;S0&#39;</span><span class="p">,</span>
+           <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+           <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">1</span><span class="p">),</span>
+           <span class="nb">next</span> <span class="o">=</span> <span class="s">&#39;S1&#39;</span><span class="p">),</span> <span class="c"># point to next stream </span>
+</pre></div>
+</div>
+</div>
+<p>Stream object</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>name <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">The name of the stream. Needed if this stream is dependent on another stream and another stream need to refer to this stream by its name.</p>
+</dd>
+<dt>packet <span class="classifier-delimiter">:</span> <span class="classifier">STLPktBuilder see <a class="reference internal" href="scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder" title="trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder</span></code></a></span></dt>
+<dd><p class="first last">The template packet and field engine program e.g. packet = STLPktBuilder(pkt = base_pkt/pad)</p>
+</dd>
+</dl>
+<p>mode :  <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXCont" title="trex_stl_lib.trex_stl_streams.STLTXCont"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXCont</span></code></a> or <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXSingleBurst" title="trex_stl_lib.trex_stl_streams.STLTXSingleBurst"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXSingleBurst</span></code></a>  or  <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXMultiBurst" title="trex_stl_lib.trex_stl_streams.STLTXMultiBurst"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXMultiBurst</span></code></a></p>
+<dl class="last docutils">
+<dt>enabled <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">if the stream is enabled.</p>
+</dd>
+<dt>self_start <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">In case it is False another stream will activate it</p>
+</dd>
+<dt>isg <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">Inter stream gap in usec. time to wait until stream will send the first packet</p>
+</dd>
+<dt>flow_stats <span class="classifier-delimiter">:</span> <span class="classifier"><a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLFlowStats" title="trex_stl_lib.trex_stl_streams.STLFlowStats"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLFlowStats</span></code></a> </span></dt>
+<dd><p class="first last">Per stream statistic object see STLFlowStats</p>
+</dd>
+<dt>next <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">The name of the stream to activate</p>
+</dd>
+<dt>stream_id :</dt>
+<dd><p class="first last">for HLTAPI usage</p>
+</dd>
+<dt>action_count <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t</span></dt>
+<dd><p class="first last">In case there is a next stream how many loops until stopping. Default is zero, which mean unlimited</p>
+</dd>
+<dt>random_seed: uint16_t </dt>
+<dd><p class="first last">If given the seed for this stream will be this value. Good in case you need a deterministic random value</p>
+</dd>
+<dt>mac_src_override_by_pkt <span class="classifier-delimiter">:</span> <span class="classifier">bool </span></dt>
+<dd><p class="first last">Template packet will set src MAC</p>
+</dd>
+<dt>mac_dst_override_mode=None <span class="classifier-delimiter">:</span> <span class="classifier">STLStreamDstMAC_xx</span></dt>
+<dd><p class="first last">Template packet will set dst MAC</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>return json format</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_id">
+<code class="descname">get_id</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stream id after resolution</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_name">
+<code class="descname">get_name</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the stream name</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_next">
+<code class="descname">get_next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_next"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_next" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get next stream object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_pkt">
+<code class="descname">get_pkt</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_pkt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_pkt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get packet as string</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_pkt_len">
+<code class="descname">get_pkt_len</code><span class="sig-paren">(</span><em>count_crc=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_pkt_len"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_pkt_len" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get packet number of bytes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_pkt_type">
+<code class="descname">get_pkt_type</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_pkt_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_pkt_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get packet description for example IP:UDP</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.get_rate_from_field">
+<em class="property">static </em><code class="descname">get_rate_from_field</code><span class="sig-paren">(</span><em>rate_json</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.get_rate_from_field"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.get_rate_from_field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get rate from json</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.to_pkt_dump">
+<code class="descname">to_pkt_dump</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.to_pkt_dump"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.to_pkt_dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>print packet description from scapy</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.to_yaml">
+<code class="descname">to_yaml</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.to_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert to YAML</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.to_code">
+<code class="descname">to_code</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.to_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.to_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert to Python code as profile</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLStream.dump_to_yaml">
+<code class="descname">dump_to_yaml</code><span class="sig-paren">(</span><em>yaml_file=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLStream.dump_to_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLStream.dump_to_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>print as yaml</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="stlstream-modes">
+<h2>STLStream modes<a class="headerlink" href="#stlstream-modes" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLTXMode">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLTXMode</code><span class="sig-paren">(</span><em>pps=None</em>, <em>bps_L1=None</em>, <em>bps_L2=None</em>, <em>percentage=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLTXMode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLTXMode" title="Permalink to this definition">¶</a></dt>
+<dd><p>mode rate speed</p>
+<p>Speed could be in packet per second (pps) or L2/L1 bps or port precent 
+only one of them is valid. 
+you can enter pps =10000 oe bps_L1=10</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>pps <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">packet per second</p>
+</dd>
+<dt>bps_L1 <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">bit per second L1 (with IPG)</p>
+</dd>
+<dt>bps_L2 <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">bit per second L2 (Ethernet-FCS)</p>
+</dd>
+<dt>percentage <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">link interface precent  0-100 e.g. 10 is 10%% of the port link setup</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="literal-block-wrapper container" id="stltxmode-example">
+<div class="code-block-caption"><span class="caption-text">STLTXMode Example</span><a class="headerlink" href="#stltxmode-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">bps_L1</span> <span class="o">=</span> <span class="mi">10000000</span><span class="p">)</span> <span class="c">#10mbps L1</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">bps_L2</span> <span class="o">=</span> <span class="mi">10000000</span><span class="p">)</span> <span class="c">#10mbps L2</span>
+
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">percentage</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>   <span class="c">#10%</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLTXCont">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLTXCont</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLTXCont"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLTXCont" title="Permalink to this definition">¶</a></dt>
+<dd><p>continuous mode</p>
+<p>continuous mode</p>
+<blockquote>
+<div>see <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXMode" title="trex_stl_lib.trex_stl_streams.STLTXMode"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXMode</span></code></a> for rate</div></blockquote>
+<div class="literal-block-wrapper container" id="stltxcont-example">
+<div class="code-block-caption"><span class="caption-text">STLTXCont Example</span><a class="headerlink" href="#stltxcont-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>       <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLTXSingleBurst">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLTXSingleBurst</code><span class="sig-paren">(</span><em>total_pkts=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLTXSingleBurst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLTXSingleBurst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Single burst mode</p>
+<p>single burst mode</p>
+<blockquote>
+<div><blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>total_pkts <span class="classifier-delimiter">:</span> <span class="classifier">int</span></dt>
+<dd><p class="first last">how many packets for this burst</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>see <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXMode" title="trex_stl_lib.trex_stl_streams.STLTXMode"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXMode</span></code></a> for rate</p>
+</div></blockquote>
+<div class="literal-block-wrapper container" id="stltxsingleburst-example">
+<div class="code-block-caption"><span class="caption-text">STLTXSingleBurst Example</span><a class="headerlink" href="#stltxsingleburst-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>       <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLTXMultiBurst">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLTXMultiBurst</code><span class="sig-paren">(</span><em>pkts_per_burst=1</em>, <em>ibg=0.0</em>, <em>count=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLTXMultiBurst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLTXMultiBurst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Multi burst mode</p>
+<p>Multi burst mode</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><blockquote class="first">
+<div><dl class="docutils">
+<dt>pkts_per_burst: int </dt>
+<dd><blockquote class="first">
+<div><p>how many packets per burst</p>
+</div></blockquote>
+<dl class="last docutils">
+<dt>ibg <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">inter burst gap in usec 1000,000.0 is 1 sec</p>
+</dd>
+<dt>count <span class="classifier-delimiter">:</span> <span class="classifier">int </span></dt>
+<dd><p class="first last">how many bursts</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<p class="last">see <a class="reference internal" href="#trex_stl_lib.trex_stl_streams.STLTXMode" title="trex_stl_lib.trex_stl_streams.STLTXMode"><code class="xref py py-class docutils literal"><span class="pre">trex_stl_lib.trex_stl_streams.STLTXMode</span></code></a> for rate</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="literal-block-wrapper container" id="stltxmultiburst-example">
+<div class="code-block-caption"><span class="caption-text">STLTXMultiBurst Example</span><a class="headerlink" href="#stltxmultiburst-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>       <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXMultiBurst</span><span class="p">(</span><span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">pkts_per_burst</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span><span class="n">count</span> <span class="mi">10</span><span class="p">,</span> <span class="n">ibg</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="trex_stl_lib.trex_stl_streams.STLFlowStats">
+<em class="property">class </em><code class="descclassname">trex_stl_lib.trex_stl_streams.</code><code class="descname">STLFlowStats</code><span class="sig-paren">(</span><em>pg_id</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLFlowStats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLFlowStats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define per stream stats</p>
+<div class="literal-block-wrapper container" id="stlflowstats-example">
+<div class="code-block-caption"><span class="caption-text">STLFlowStats Example</span><a class="headerlink" href="#stlflowstats-example" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">flow_stats</span> <span class="o">=</span> <span class="n">STLFlowStats</span><span class="p">(</span><span class="n">pg_id</span> <span class="o">=</span> <span class="mi">7</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<dl class="method">
+<dt id="trex_stl_lib.trex_stl_streams.STLFlowStats.to_json">
+<code class="descname">to_json</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_stl_lib/trex_stl_streams.html#STLFlowStats.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_stl_lib.trex_stl_streams.STLFlowStats.to_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>dump as json</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="stlprofile-snippet">
+<h2>STLProfile snippet<a class="headerlink" href="#stlprofile-snippet" title="Permalink to this headline">¶</a></h2>
+<div class="literal-block-wrapper container" id="example1">
+<div class="code-block-caption"><span class="caption-text">Example1</span><a class="headerlink" href="#example1" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>    <span class="n">size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fsize</span> <span class="o">-</span> <span class="mi">4</span><span class="p">;</span> <span class="c"># no FCS</span>
+    <span class="n">base_pkt</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">base_pkt1</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.2&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">base_pkt2</span> <span class="o">=</span>  <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&quot;16.0.0.3&quot;</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span><span class="n">sport</span><span class="o">=</span><span class="mi">1025</span><span class="p">)</span>
+    <span class="n">pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">base_pkt</span><span class="p">))</span> <span class="o">*</span> <span class="s">&#39;x&#39;</span>
+
+
+    <span class="k">return</span> <span class="n">STLProfile</span><span class="p">(</span> <span class="p">[</span> <span class="n">STLStream</span><span class="p">(</span> <span class="n">isg</span> <span class="o">=</span> <span class="mf">10.0</span><span class="p">,</span> <span class="c"># star in delay</span>
+                                    <span class="n">name</span>    <span class="o">=</span><span class="s">&#39;S0&#39;</span><span class="p">,</span>
+                                    <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                    <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">10</span><span class="p">),</span>
+                                    <span class="nb">next</span> <span class="o">=</span> <span class="s">&#39;S1&#39;</span><span class="p">),</span> <span class="c"># point to next stream</span>
+
+                         <span class="n">STLStream</span><span class="p">(</span> <span class="n">self_start</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="c"># stream is  disabled enable trow S0</span>
+                                    <span class="n">name</span>    <span class="o">=</span><span class="s">&#39;S1&#39;</span><span class="p">,</span>
+                                    <span class="n">packet</span>  <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt1</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                    <span class="n">mode</span>    <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">20</span><span class="p">),</span>
+                                    <span class="nb">next</span>    <span class="o">=</span> <span class="s">&#39;S2&#39;</span> <span class="p">),</span>
+
+                         <span class="n">STLStream</span><span class="p">(</span>  <span class="n">self_start</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="c"># stream is  disabled enable trow S0</span>
+                                     <span class="n">name</span>   <span class="o">=</span><span class="s">&#39;S2&#39;</span><span class="p">,</span>
+                                     <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base_pkt2</span><span class="o">/</span><span class="n">pad</span><span class="p">),</span>
+                                     <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span> <span class="n">pps</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">30</span> <span class="p">)</span>
+                                    <span class="p">)</span>
+                        <span class="p">])</span><span class="o">.</span><span class="n">get_streams</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="literal-block-wrapper container" id="example2">
+<div class="code-block-caption"><span class="caption-text">Example2</span><a class="headerlink" href="#example2" title="Permalink to this code">¶</a></div>
+<div class="highlight-python"><div class="highlight"><pre>    <span class="k">class</span> <span class="nc">STLS1</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+        <span class="k">def</span> <span class="nf">get_streams</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">direction</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">STLStream</span><span class="p">(</span><span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span><span class="s">&quot;stl/yaml/udp_64B_no_crc.pcap&quot;</span><span class="p">),</span>
+                              <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">pps</span><span class="o">=</span><span class="mi">1000</span><span class="p">),</span>
+                              <span class="n">flow_stats</span> <span class="o">=</span> <span class="n">STLFlowStats</span><span class="p">(</span><span class="n">pg_id</span> <span class="o">=</span> <span class="mi">7</span><span class="p">)),</span>
+
+                    <span class="n">STLStream</span><span class="p">(</span><span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span><span class="s">&quot;stl/yaml/udp_594B_no_crc.pcap&quot;</span><span class="p">),</span>
+                              <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">pps</span><span class="o">=</span><span class="mi">5000</span><span class="p">),</span>
+                              <span class="n">flow_stats</span> <span class="o">=</span> <span class="n">STLFlowStats</span><span class="p">(</span><span class="n">pg_id</span> <span class="o">=</span> <span class="mi">12</span><span class="p">))</span>
+                   <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Traffic profile modules</a><ul>
+<li><a class="reference internal" href="#stlprofile-class">STLProfile class</a></li>
+<li><a class="reference internal" href="#stlstream">STLStream</a></li>
+<li><a class="reference internal" href="#stlstream-modes">STLStream modes</a></li>
+<li><a class="reference internal" href="#stlprofile-snippet">STLProfile snippet</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="client_code.html"
+                        title="previous chapter">TRex Client Module</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="scapy_builder.html"
+                        title="next chapter">Packet builder modules</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/profile_code.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="scapy_builder.html" title="Packet builder modules"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="client_code.html" title="TRex Client Module"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >TRex Stateless API Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

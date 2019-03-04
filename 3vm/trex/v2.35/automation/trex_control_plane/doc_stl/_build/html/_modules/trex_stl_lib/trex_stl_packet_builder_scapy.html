@@ -1,0 +1,1514 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>trex_stl_lib.trex_stl_packet_builder_scapy &mdash; TRex Stateless Python API 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="TRex Stateless Python API 1.7.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for trex_stl_lib.trex_stl_packet_builder_scapy</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">binascii</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+
+<span class="kn">from</span> <span class="nn">trex_stl_packet_builder_interface</span> <span class="kn">import</span> <span class="n">CTrexPktBuilderInterface</span>
+
+<span class="kn">from</span> <span class="nn">scapy.all</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="k">class</span> <span class="nc">CTRexPacketBuildException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the general Packet Building error exception class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">message</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__repr__</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">u&quot;[errcode:</span><span class="si">%r</span><span class="s">] </span><span class="si">%r</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+
+<span class="c">################################################################################################</span>
+
+<span class="k">def</span> <span class="nf">_buffer_to_num</span><span class="p">(</span><span class="n">str_buffer</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">str_buffer</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of str_buffer is not str&#39;</span>
+    <span class="n">res</span><span class="o">=</span><span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">str_buffer</span><span class="p">:</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="mi">8</span>
+        <span class="n">res</span> <span class="o">+=</span> <span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">res</span>
+
+
+<span class="k">def</span> <span class="nf">ipv4_str_to_num</span> <span class="p">(</span><span class="n">ipv4_buffer</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">ipv4_buffer</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of ipv4_buffer is not str&#39;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">ipv4_buffer</span><span class="p">)</span><span class="o">==</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#39;size of ipv4_buffer is not 4&#39;</span>
+    <span class="k">return</span> <span class="n">_buffer_to_num</span><span class="p">(</span><span class="n">ipv4_buffer</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">mac_str_to_num</span> <span class="p">(</span><span class="n">mac_buffer</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">mac_buffer</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of mac_buffer is not str&#39;</span>
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">mac_buffer</span><span class="p">)</span><span class="o">==</span><span class="mi">6</span><span class="p">,</span> <span class="s">&#39;size of mac_buffer is not 6&#39;</span>
+    <span class="k">return</span> <span class="n">_buffer_to_num</span><span class="p">(</span><span class="n">mac_buffer</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">is_valid_ipv4</span><span class="p">(</span><span class="n">ip_addr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    return buffer in network order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span>  <span class="nb">type</span><span class="p">(</span><span class="n">ip_addr</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">ip_addr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ip_addr</span>
+
+    <span class="k">if</span>  <span class="nb">type</span><span class="p">(</span><span class="n">ip_addr</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span> <span class="p">:</span>
+        <span class="n">ip_addr</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">inet_ntoa</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&quot;!I&quot;</span><span class="p">,</span> <span class="n">ip_addr</span><span class="p">))</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">socket</span><span class="o">.</span><span class="n">inet_pton</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">ip_addr</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># no inet_pton here, sorry</span>
+        <span class="k">return</span> <span class="n">socket</span><span class="o">.</span><span class="n">inet_aton</span><span class="p">(</span><span class="n">ip_addr</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>  <span class="c"># not a valid address</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="s">&quot;not valid ipv4 format&quot;</span><span class="p">);</span>
+
+
+<span class="k">def</span> <span class="nf">is_valid_ipv6</span><span class="p">(</span><span class="n">ipv6_addr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    return buffer in network order</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ipv6_addr</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">ipv6_addr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">16</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">ipv6_addr</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">socket</span><span class="o">.</span><span class="n">inet_pton</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET6</span><span class="p">,</span> <span class="n">ipv6_addr</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>  <span class="c"># no inet_pton here, sorry</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="s">&#39;No inet_pton function available&#39;</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="s">&#39;Not valid ipv6 format&#39;</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">CTRexScriptsBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    VM Script base class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">clone</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexScFieldRangeBase</span><span class="p">(</span><span class="n">CTRexScriptsBase</span><span class="p">):</span>
+
+    <span class="n">FILED_TYPES</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;inc&#39;</span><span class="p">,</span> <span class="s">&#39;dec&#39;</span><span class="p">,</span> <span class="s">&#39;rand&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_name</span><span class="p">,</span>
+                       <span class="n">field_type</span>
+                            <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexScFieldRangeBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_name</span> <span class="o">=</span><span class="n">field_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_type</span> <span class="o">=</span><span class="n">field_type</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">field_type</span> <span class="ow">in</span> <span class="n">CTRexScFieldRangeBase</span><span class="o">.</span><span class="n">FILED_TYPES</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="s">&#39;field type should be in </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">FILED_TYPES</span><span class="p">);</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexScFieldRangeValue</span><span class="p">(</span><span class="n">CTRexScFieldRangeBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    range of field value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_name</span><span class="p">,</span>
+                       <span class="n">field_type</span><span class="p">,</span>
+                       <span class="n">min_value</span><span class="p">,</span>
+                       <span class="n">max_value</span>
+                           <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexScFieldRangeValue</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">field_name</span><span class="p">,</span><span class="n">field_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span><span class="n">min_value</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span><span class="n">max_value</span><span class="p">;</span>
+        <span class="k">if</span> <span class="n">min_value</span> <span class="o">&gt;</span> <span class="n">max_value</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">12</span><span class="p">,</span> <span class="s">&#39;min is greater than max&#39;</span><span class="p">);</span>
+        <span class="k">if</span> <span class="n">min_value</span> <span class="o">==</span> <span class="n">max_value</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">13</span><span class="p">,</span> <span class="s">&quot;min value is equal to max value, you can&#39;t use this type of range&quot;</span><span class="p">);</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexScIpv4SimpleRange</span><span class="p">(</span><span class="n">CTRexScFieldRangeBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    range of ipv4 ip</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">field_type</span><span class="p">,</span> <span class="n">min_ip</span><span class="p">,</span> <span class="n">max_ip</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexScIpv4SimpleRange</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">field_name</span><span class="p">,</span><span class="n">field_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_ip</span> <span class="o">=</span> <span class="n">min_ip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_ip</span> <span class="o">=</span> <span class="n">max_ip</span>
+        <span class="n">mmin</span><span class="o">=</span><span class="n">ipv4_str_to_num</span> <span class="p">(</span><span class="n">is_valid_ipv4</span><span class="p">(</span><span class="n">min_ip</span><span class="p">))</span>
+        <span class="n">mmax</span><span class="o">=</span><span class="n">ipv4_str_to_num</span> <span class="p">(</span><span class="n">is_valid_ipv4</span><span class="p">(</span><span class="n">max_ip</span><span class="p">))</span>
+        <span class="k">if</span>  <span class="n">mmin</span> <span class="o">&gt;</span> <span class="n">mmax</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;CTRexScIpv4SimpleRange m_min ip is bigger than max&#39;</span><span class="p">);</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexScIpv4TupleGen</span><span class="p">(</span><span class="n">CTRexScriptsBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    range tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">FLAGS_ULIMIT_FLOWS</span> <span class="o">=</span><span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_ipv4</span><span class="p">,</span> <span class="n">max_ipv4</span><span class="p">,</span> <span class="n">num_flows</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">min_port</span><span class="o">=</span><span class="mi">1025</span><span class="p">,</span> <span class="n">max_port</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexScIpv4TupleGen</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_ip</span> <span class="o">=</span> <span class="n">min_ipv4</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_ip</span> <span class="o">=</span> <span class="n">max_ipv4</span>
+        <span class="n">mmin</span><span class="o">=</span><span class="n">ipv4_str_to_num</span> <span class="p">(</span><span class="n">is_valid_ipv4</span><span class="p">(</span><span class="n">min_ipv4</span><span class="p">))</span>
+        <span class="n">mmax</span><span class="o">=</span><span class="n">ipv4_str_to_num</span> <span class="p">(</span><span class="n">is_valid_ipv4</span><span class="p">(</span><span class="n">max_ipv4</span><span class="p">))</span>
+        <span class="k">if</span>  <span class="n">mmin</span> <span class="o">&gt;</span> <span class="n">mmax</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;CTRexScIpv4SimpleRange m_min ip is bigger than max&#39;</span><span class="p">);</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_flows</span><span class="o">=</span><span class="n">num_flows</span><span class="p">;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_port</span> <span class="o">=</span><span class="n">min_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_port</span> <span class="o">=</span><span class="n">max_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flags</span> <span class="o">=</span>   <span class="n">flags</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexScTrimPacketSize</span><span class="p">(</span><span class="n">CTRexScriptsBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    trim packet size. field type is CTRexScFieldRangeBase.FILED_TYPES = [&quot;inc&quot;,&quot;dec&quot;,&quot;rand&quot;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">field_type</span><span class="o">=</span><span class="s">&quot;rand&quot;</span><span class="p">,</span><span class="n">min_pkt_size</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">max_pkt_size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexScTrimPacketSize</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">field_type</span> <span class="o">=</span> <span class="n">field_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_pkt_size</span> <span class="o">=</span> <span class="n">min_pkt_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_pkt_size</span> <span class="o">=</span> <span class="n">max_pkt_size</span>
+        <span class="k">if</span> <span class="n">max_pkt_size</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">min_pkt_size</span> <span class="o">!=</span><span class="bp">None</span> <span class="p">:</span>
+            <span class="k">if</span> <span class="n">min_pkt_size</span> <span class="o">==</span> <span class="n">max_pkt_size</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;CTRexScTrimPacketSize min_pkt_size is the same as max_pkt_size &#39;</span><span class="p">);</span>
+
+            <span class="k">if</span> <span class="n">min_pkt_size</span> <span class="o">&gt;</span> <span class="n">max_pkt_size</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;CTRexScTrimPacketSize min_pkt_size is bigger than max_pkt_size &#39;</span><span class="p">);</span>
+
+
+<div class="viewcode-block" id="STLScVmRaw"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLScVmRaw">[docs]</a><span class="k">class</span> <span class="nc">STLScVmRaw</span><span class="p">(</span><span class="n">CTRexScriptsBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    raw instructions</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">list_of_commands</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="n">split_by_field</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLScVmRaw</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">split_by_field</span> <span class="o">=</span> <span class="n">split_by_field</span>
+        <span class="k">if</span> <span class="n">list_of_commands</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">commands</span> <span class="o">=</span><span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">commands</span> <span class="o">=</span> <span class="n">list_of_commands</span>
+
+    <span class="k">def</span> <span class="nf">add_cmd</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">cmd</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cmd</span><span class="p">)</span>
+
+
+
+<span class="c">################################################################################################</span>
+<span class="c"># VM raw instructions</span>
+<span class="c">################################################################################################</span>
+</div>
+<span class="k">class</span> <span class="nc">CTRexVmInsBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    instruction base</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ins_type</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="n">ins_type</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">ins_type</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of ins_type is not str&#39;</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmInsFixIpv4</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsFixIpv4</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;fix_checksum_ipv4&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span> <span class="n">offset</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of offset is not int&#39;</span>
+
+
+<span class="k">class</span> <span class="nc">CTRexVmInsFlowVar</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="c">#TBD add more validation tests</span>
+
+    <span class="n">OPERATIONS</span> <span class="o">=</span><span class="p">[</span><span class="s">&#39;inc&#39;</span><span class="p">,</span> <span class="s">&#39;dec&#39;</span><span class="p">,</span> <span class="s">&#39;random&#39;</span><span class="p">]</span>
+    <span class="n">VALID_SIZES</span> <span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">init_value</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">,</span><span class="n">step</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;flow_var&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fv_name</span><span class="p">;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_value</span> <span class="o">=</span> <span class="n">init_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">init_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of init_value is not int&#39;</span>
+        <span class="k">assert</span> <span class="n">init_value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;init_value (</span><span class="si">%s</span><span class="s">) is negative&#39;</span> <span class="o">%</span> <span class="n">init_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="o">=</span><span class="n">min_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">min_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of min_value is not int&#39;</span>
+        <span class="k">assert</span> <span class="n">min_value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;min_value (</span><span class="si">%s</span><span class="s">) is negative&#39;</span> <span class="o">%</span> <span class="n">min_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="o">=</span><span class="n">max_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">max_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of max_value is not int&#39;</span>
+        <span class="k">assert</span> <span class="n">max_value</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;max_value (</span><span class="si">%s</span><span class="s">) is negative&#39;</span> <span class="o">%</span> <span class="n">max_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="o">=</span><span class="n">step</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">step</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of step should be int&#39;</span>
+        <span class="k">assert</span> <span class="n">step</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&#39;step (</span><span class="si">%s</span><span class="s">) is negative&#39;</span> <span class="o">%</span> <span class="n">step</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmInsWrFlowVar</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="p">,</span> <span class="n">add_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">is_big_endian</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsWrFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;write_flow_var&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span> <span class="n">pkt_offset</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt_offset</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of pkt_offset is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_value</span> <span class="o">=</span> <span class="n">add_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">add_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of add_value is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_big_endian</span> <span class="o">=</span> <span class="n">is_big_endian</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">is_big_endian</span><span class="p">)</span><span class="o">==</span><span class="nb">bool</span><span class="p">,</span> <span class="s">&#39;type of is_big_endian is not bool&#39;</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmInsWrMaskFlowVar</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="p">,</span><span class="n">pkt_cast_size</span><span class="p">,</span><span class="n">mask</span><span class="p">,</span><span class="n">shift</span><span class="p">,</span><span class="n">add_value</span><span class="p">,</span> <span class="n">is_big_endian</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsWrMaskFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;write_mask_flow_var&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span> <span class="n">pkt_offset</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt_offset</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of pkt_offset is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_cast_size</span> <span class="o">=</span> <span class="n">pkt_cast_size</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt_cast_size</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of pkt_cast_size is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of mask is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shift</span> <span class="o">=</span> <span class="n">shift</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of shift is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_value</span> <span class="o">=</span><span class="n">add_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">add_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of add_value is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_big_endian</span> <span class="o">=</span> <span class="n">is_big_endian</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">is_big_endian</span><span class="p">)</span><span class="o">==</span><span class="nb">bool</span><span class="p">,</span> <span class="s">&#39;type of is_big_endian is not bool&#39;</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmInsTrimPktSize</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fv_name</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsTrimPktSize</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;trim_pkt_size&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmInsTupleGen</span><span class="p">(</span><span class="n">CTRexVmInsBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">ip_min</span><span class="p">,</span> <span class="n">ip_max</span><span class="p">,</span> <span class="n">port_min</span><span class="p">,</span> <span class="n">port_max</span><span class="p">,</span> <span class="n">limit_flows</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmInsTupleGen</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="s">&quot;tuple_flow_var&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span><span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_min</span> <span class="o">=</span> <span class="n">ip_min</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_max</span> <span class="o">=</span> <span class="n">ip_max</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port_min</span> <span class="o">=</span> <span class="n">port_min</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port_max</span> <span class="o">=</span> <span class="n">port_max</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">limit_flows</span> <span class="o">=</span> <span class="n">limit_flows</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flags</span>       <span class="o">=</span><span class="n">flags</span><span class="p">;</span>
+
+
+<span class="c">################################################################################################</span>
+<span class="c">#</span>
+<span class="k">class</span> <span class="nc">CTRexVmEngine</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+       <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            inlcude list of instruction</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">CTRexVmEngine</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ins</span><span class="o">=</span><span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">split_by_var</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+       <span class="c"># return as json</span>
+       <span class="k">def</span> <span class="nf">get_json</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+           <span class="n">inst_array</span> <span class="o">=</span> <span class="p">[];</span>
+           <span class="c"># dump it as dict</span>
+           <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ins</span><span class="p">:</span>
+               <span class="n">inst_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">__dict__</span><span class="p">);</span>
+
+           <span class="k">return</span> <span class="p">{</span><span class="s">&#39;instructions&#39;</span><span class="p">:</span> <span class="n">inst_array</span><span class="p">,</span> <span class="s">&#39;split_by_var&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_by_var</span><span class="p">}</span>
+
+       <span class="k">def</span> <span class="nf">add_ins</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ins</span><span class="p">):</span>
+           <span class="c">#assert issubclass(ins, CTRexVmInsBase)</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">ins</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ins</span><span class="p">);</span>
+
+       <span class="k">def</span> <span class="nf">dump</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+           <span class="n">cnt</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+           <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ins</span><span class="p">:</span>
+               <span class="k">print</span> <span class="s">&quot;ins&quot;</span><span class="p">,</span><span class="n">cnt</span>
+               <span class="n">cnt</span> <span class="o">=</span> <span class="n">cnt</span> <span class="o">+</span><span class="mi">1</span>
+               <span class="k">print</span> <span class="n">obj</span><span class="o">.</span><span class="n">__dict__</span>
+
+       <span class="k">def</span> <span class="nf">dump_bjson</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+          <span class="k">print</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+       <span class="k">def</span> <span class="nf">dump_as_yaml</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+          <span class="k">print</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+
+
+<span class="c">################################################################################################</span>
+
+<span class="k">class</span> <span class="nc">CTRexScapyPktUtl</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scapy_pkt</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">scapy_pkt</span>
+
+    <span class="k">def</span> <span class="nf">pkt_iter</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">p</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">;</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">p</span>
+            <span class="n">p</span><span class="o">=</span><span class="n">p</span><span class="o">.</span><span class="n">payload</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="o">==</span><span class="bp">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">NoPayload</span><span class="p">):</span>
+                <span class="k">break</span><span class="p">;</span>
+
+    <span class="k">def</span> <span class="nf">get_list_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">l</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_iter</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">l</span>
+
+
+    <span class="k">def</span> <span class="nf">get_pkt_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return string &#39;IP:UDP:TCP&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">l</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_list_iter</span> <span class="p">();</span>
+        <span class="n">l1</span><span class="o">=</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="n">l</span> <span class="p">);</span>
+        <span class="k">return</span> <span class="s">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">l1</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">_layer_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return offset of layer e.g &#39;IP&#39;,1 will return offfset of layer ip:1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">save_cnt</span><span class="o">=</span><span class="n">cnt</span>
+        <span class="k">for</span> <span class="n">pkt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_iter</span> <span class="p">():</span>
+            <span class="k">if</span> <span class="n">pkt</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cnt</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">pkt</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cnt</span><span class="o">=</span><span class="n">cnt</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;no layer </span><span class="si">%s</span><span class="s">-</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">save_cnt</span><span class="p">)));</span>
+
+
+    <span class="k">def</span> <span class="nf">layer_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">cnt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return offset of layer e.g &#39;IP&#39;,1 will return offfset of layer ip:1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">save_cnt</span><span class="o">=</span><span class="n">cnt</span>
+        <span class="k">for</span> <span class="n">pkt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_iter</span> <span class="p">():</span>
+            <span class="k">if</span> <span class="n">pkt</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">cnt</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">pkt</span><span class="o">.</span><span class="n">offset</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">cnt</span><span class="o">=</span><span class="n">cnt</span> <span class="o">-</span><span class="mi">1</span>
+
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;no layer </span><span class="si">%s</span><span class="s">-</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">save_cnt</span><span class="p">)));</span>
+
+    <span class="k">def</span> <span class="nf">get_field_offet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">,</span> <span class="n">layer_cnt</span><span class="p">,</span> <span class="n">field_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return offset of layer e.g &#39;IP&#39;,1 will return offfset of layer ip:1</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">t</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_layer_offset</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span><span class="n">layer_cnt</span><span class="p">);</span>
+        <span class="n">l_offset</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+        <span class="n">layer_pkt</span><span class="o">=</span><span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c">#layer_pkt.dump_fields_offsets ()</span>
+
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">layer_pkt</span><span class="o">.</span><span class="n">fields_desc</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">field_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">l_offset</span><span class="o">+</span><span class="n">f</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span><span class="n">f</span><span class="o">.</span><span class="n">get_size_bytes</span> <span class="p">());</span>
+
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&quot;no layer </span><span class="si">%s</span><span class="s">-</span><span class="si">%d</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">save_cnt</span><span class="p">,</span> <span class="n">field_name</span><span class="p">));</span>
+
+    <span class="k">def</span> <span class="nf">get_layer_offet_by_str</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer_des</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return layer offset by string</span>
+
+<span class="sd">       :parameters:</span>
+
+<span class="sd">        IP:0</span>
+<span class="sd">        IP:1</span>
+<span class="sd">        return offset</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">l1</span><span class="o">=</span><span class="n">layer_des</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">=</span><span class="s">&quot;&quot;</span>
+        <span class="n">layer_cnt</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l1</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">layer</span><span class="o">=</span><span class="n">l1</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">layer</span><span class="o">=</span><span class="n">l1</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+            <span class="n">layer_cnt</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">l1</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">layer_offset</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">layer_cnt</span><span class="p">)</span>
+
+
+
+    <span class="k">def</span> <span class="nf">get_field_offet_by_str</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field_des</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return field_des (offset,size) layer:cnt.field</span>
+<span class="sd">        for example  </span>
+<span class="sd">        802|1Q.vlan get 802.1Q-&gt;valn replace | with .</span>
+<span class="sd">        IP.src</span>
+<span class="sd">        IP:0.src  (first IP.src like IP.src)</span>
+<span class="sd">        for example IP:1.src  for internal IP</span>
+
+<span class="sd">        return (offset, size) as tuple</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">s</span><span class="o">=</span><span class="n">field_des</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">);</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">!=</span><span class="mi">2</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="p">(</span><span class="s">&quot;field desription should be layer:cnt.field e.g IP.src or IP:1.src&quot;</span><span class="p">));</span>
+
+
+        <span class="n">layer_ex</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;|&quot;</span><span class="p">,</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">l1</span><span class="o">=</span><span class="n">layer_ex</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;:&quot;</span><span class="p">)</span>
+        <span class="n">layer</span><span class="o">=</span><span class="s">&quot;&quot;</span>
+        <span class="n">layer_cnt</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l1</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">layer</span><span class="o">=</span><span class="n">l1</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">layer</span><span class="o">=</span><span class="n">l1</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+            <span class="n">layer_cnt</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">l1</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_field_offet</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span><span class="n">layer_cnt</span><span class="p">,</span><span class="n">field</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_IPv4</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">has_layer</span><span class="p">(</span><span class="s">&quot;IP&quot;</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">has_IPv6</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">has_layer</span><span class="p">(</span><span class="s">&quot;IPv6&quot;</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">has_UDP</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">has_layer</span><span class="p">(</span><span class="s">&quot;UDP&quot;</span><span class="p">);</span>
+
+<span class="c">################################################################################################</span>
+
+<span class="k">class</span> <span class="nc">CTRexVmDescBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    instruction base</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="k">pass</span><span class="p">;</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="p">;</span>
+
+    <span class="k">def</span> <span class="nf">get_json</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_obj</span><span class="p">()</span><span class="o">.</span><span class="n">__dict__</span>
+
+    <span class="k">def</span> <span class="nf">dump_bjson</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="k">print</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="n">sort_keys</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dump_as_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+       <span class="k">print</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">get_var_ref</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">          virtual function return a ref var name</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">get_var_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">          virtual function return the varible name if exists</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">          virtual function to take parent than has function name_to_offset</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">pass</span><span class="p">;</span>
+
+
+<span class="k">def</span> <span class="nf">valid_fv_size</span> <span class="p">(</span><span class="n">size</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">size</span> <span class="ow">in</span> <span class="n">CTRexVmInsFlowVar</span><span class="o">.</span><span class="n">VALID_SIZES</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;flow var has not valid size </span><span class="si">%d</span><span class="s"> &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="n">size</span>  <span class="p">);</span>
+
+<span class="k">def</span> <span class="nf">valid_fv_ops</span> <span class="p">(</span><span class="n">op</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">op</span> <span class="ow">in</span> <span class="n">CTRexVmInsFlowVar</span><span class="o">.</span><span class="n">OPERATIONS</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;flow var does not have a valid op </span><span class="si">%s</span><span class="s"> &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="n">op</span>  <span class="p">);</span>
+
+<span class="k">def</span> <span class="nf">convert_val</span> <span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">val</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+          <span class="k">return</span> <span class="n">ipv4_str_to_num</span> <span class="p">(</span><span class="n">is_valid_ipv4</span><span class="p">(</span><span class="n">val</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;init val not valid </span><span class="si">%s</span><span class="s"> &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="n">val</span>  <span class="p">);</span>
+
+<span class="k">def</span> <span class="nf">check_for_int</span> <span class="p">(</span><span class="n">val</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of vcal is not int&#39;</span>
+
+
+<div class="viewcode-block" id="STLVmFlowVar"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLVmFlowVar">[docs]</a><span class="k">class</span> <span class="nc">STLVmFlowVar</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">init_value</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">min_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">op</span><span class="o">=</span><span class="s">&quot;inc&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Flow variable instruction. Allocate a variable on a stream context. The size of the variable could be determined </span>
+<span class="sd">        The operation can be inc, dec and random. In case of increment and decrement operation, it is possible to set the &quot;step&quot; size.</span>
+<span class="sd">        Initialization value, minimum and maximum value could be set too.</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">             name : string </span>
+<span class="sd">                The name of the stream variable </span>
+
+<span class="sd">             init_value : int</span>
+<span class="sd">                The init value of the variable. in case of None it will be min_value </span>
+
+<span class="sd">             min_value  : int</span>
+<span class="sd">                The min value </span>
+
+<span class="sd">             max_value  : int</span>
+<span class="sd">                The max value </span>
+
+<span class="sd">             size  : int</span>
+<span class="sd">                the number of bytes of the variable. could be 1,2,4,8 for uint8_t, uint16_t, uint32_t, uint64_t</span>
+
+<span class="sd">             step  : int </span>
+<span class="sd">                step in case of &quot;inc&quot;,&quot;dec&quot; operation </span>
+
+<span class="sd">             op    : string </span>
+<span class="sd">                could be &quot;inc&quot;, &quot;dec&quot;, &quot;random&quot;</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: Example1</span>
+
+
+<span class="sd">            # input </span>
+<span class="sd">            STLVmFlowVar(min_value=0, max_value=3, size=1,op=&quot;inc&quot;)</span>
+
+<span class="sd">            # output 0,1,2,3,0,1,2,3 ..</span>
+
+<span class="sd">            # input </span>
+<span class="sd">            STLVmFlowVar(min_value=0, max_value=3, size=1,op=&quot;dec&quot;)</span>
+
+<span class="sd">            # output 0,3,2,1,0,3,2,1 ..</span>
+
+
+<span class="sd">            # input </span>
+<span class="sd">            STLVmFlowVar(min_value=0, max_value=3, size=1,op=&quot;random&quot;)</span>
+
+<span class="sd">            # output 1,1,2,3,1,2,1,0 ..</span>
+
+<span class="sd">            # input </span>
+<span class="sd">            STLVmFlowVar(min_value=0, max_value=10, size=1,op=&quot;inc&quot;,step=3)</span>
+
+<span class="sd">            # output 0,3,6,9,0,3,6,9,0..</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="p">;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span><span class="n">size</span>
+        <span class="n">valid_fv_size</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">op</span> <span class="o">=</span><span class="n">op</span>
+        <span class="n">valid_fv_ops</span> <span class="p">(</span><span class="n">op</span><span class="p">)</span>
+
+        <span class="c"># choose default value for init val</span>
+        <span class="k">if</span> <span class="n">init_value</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">init_value</span> <span class="o">=</span> <span class="n">max_value</span> <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s">&quot;dec&quot;</span> <span class="k">else</span> <span class="n">min_value</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_value</span> <span class="o">=</span> <span class="n">convert_val</span> <span class="p">(</span><span class="n">init_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span>  <span class="o">=</span> <span class="n">convert_val</span> <span class="p">(</span><span class="n">min_value</span><span class="p">);</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span>  <span class="o">=</span> <span class="n">convert_val</span> <span class="p">(</span><span class="n">max_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span>       <span class="o">=</span> <span class="n">convert_val</span> <span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;max </span><span class="si">%d</span><span class="s"> is lower than min </span><span class="si">%d</span><span class="s"> &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">)</span>  <span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CTRexVmInsFlowVar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">op</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">init_value</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">get_var_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="STLVmFixIpv4"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLVmFixIpv4">[docs]</a><span class="k">class</span> <span class="nc">STLVmFixIpv4</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">offset</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fix IPv4 header checksum. should be added if the packet header was changed and there is a need to fix he checksum</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">             offset : uint16_t or string </span>
+<span class="sd">                **IPv4 header** offset from packet start. It is **not** the offset of the checksum field itself.</span>
+<span class="sd">                in could be string in case of scapy packet. format IP[:[id]]</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: Example2</span>
+
+<span class="sd">            pkt = Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+
+<span class="sd">            # by offset </span>
+<span class="sd">            STLVmFixIpv4(offset=14)</span>
+
+<span class="sd">            # in case of scapy packet can be defined by header name </span>
+<span class="sd">            STLVmFixIpv4(offset=&quot;IP&quot;)</span>
+
+<span class="sd">            # string for second &quot;IP&quot; header in the packet is IP:1</span>
+<span class="sd">            STLVmFixIpv4(offset=&quot;IP:1&quot;)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmFixIpv4</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">offset</span><span class="p">;</span> <span class="c"># could be a name of offset</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">CTRexVmInsFixIpv4</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">parent</span><span class="o">.</span><span class="n">_pkt_layer_offset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">);</span>
+</div>
+<span class="k">class</span> <span class="nc">STLVmWrFlowVar</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="p">,</span> <span class="n">offset_fixup</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">add_val</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">is_big</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a stream variable into a packet field. </span>
+<span class="sd">        The write is done in size of the stream variable. </span>
+<span class="sd">        In case there is a need to change the write have a look into the command `STLVmWrMaskFlowVar`. </span>
+<span class="sd">        The Field name/offset can be given by name in this format ``header[:id].field``. </span>
+
+<span class="sd">        </span>
+<span class="sd">        :parameters:</span>
+<span class="sd">            fv_name : string </span>
+<span class="sd">                the stream variable to write to a packet offset </span>
+
+<span class="sd">            pkt_offset : string or in</span>
+<span class="sd">                the name of the field or offset in byte from packet start.</span>
+
+<span class="sd">            offset_fixup : int </span>
+<span class="sd">                how many bytes to go forward. In case of a negative value go backward </span>
+
+<span class="sd">             add_val     : int</span>
+<span class="sd">                value to add to stream variable before writing it to packet field. can be used as a constant offset </span>
+
+<span class="sd">             is_big      : bool </span>
+<span class="sd">                how to write the variable to the the packet. is it big-edian or little edian </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: Example3</span>
+
+<span class="sd">            pkt = Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+
+
+<span class="sd">            # write to ip.src offset </span>
+<span class="sd">            STLVmWrFlowVar (fv_name=&quot;tuple&quot;, pkt_offset= &quot;IP.src&quot; )</span>
+
+<span class="sd">            # packet offset is varible </span>
+<span class="sd">            STLVmWrFlowVar (fv_name=&quot;tuple&quot;, pkt_offset= 26 )</span>
+
+<span class="sd">            # add l3_len_fix before writing fv_rand into IP.len field </span>
+<span class="sd">            STLVmWrFlowVar(fv_name=&quot;fv_rand&quot;, pkt_offset= &quot;IP.len&quot;, add_val=l3_len_fix) </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmWrFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span><span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset_fixup</span> <span class="o">=</span><span class="n">offset_fixup</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">offset_fixup</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of offset_fixup is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span><span class="n">pkt_offset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_val</span> <span class="o">=</span><span class="n">add_val</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">add_val</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span><span class="s">&#39;type of add_val is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_big</span> <span class="o">=</span><span class="n">is_big</span><span class="p">;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">is_big</span><span class="p">)</span><span class="o">==</span><span class="nb">bool</span><span class="p">,</span><span class="s">&#39;type of is_big_endian is not bool&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_var_ref</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span>  <span class="n">CTRexVmInsWrFlowVar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_fixup</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">add_val</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">is_big</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">t</span><span class="o">=</span><span class="n">parent</span><span class="o">.</span><span class="n">_name_to_offset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<div class="viewcode-block" id="STLVmWrMaskFlowVar"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLVmWrMaskFlowVar">[docs]</a><span class="k">class</span> <span class="nc">STLVmWrMaskFlowVar</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv_name</span><span class="p">,</span> <span class="n">pkt_offset</span><span class="p">,</span> <span class="n">pkt_cast_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">mask</span><span class="o">=</span><span class="mh">0xff</span><span class="p">,</span> <span class="n">shift</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">add_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">offset_fixup</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">is_big</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write a stream variable into a packet field with some operations. </span>
+<span class="sd">        Using this instruction the variable size and the field could be with different size. </span>
+
+<span class="sd">        Pseudocode of this code::</span>
+
+<span class="sd">                uint32_t val=(cast_to_size)rd_from_variable(&quot;name&quot;) # read flow-var</span>
+<span class="sd">                val+=m_add_value                                    # add value</span>
+<span class="sd">        </span>
+<span class="sd">                if (m_shift&gt;0) {                                    # shift </span>
+<span class="sd">                    val=val&lt;&lt;m_shift</span>
+<span class="sd">                }else{</span>
+<span class="sd">                    if (m_shift&lt;0) {</span>
+<span class="sd">                        val=val&gt;&gt;(-m_shift)</span>
+<span class="sd">                    }</span>
+<span class="sd">                }</span>
+<span class="sd">        </span>
+<span class="sd">                pkt_val=rd_from_pkt(pkt_offset)                     # RMW to the packet</span>
+<span class="sd">                pkt_val = (pkt_val &amp; ~m_mask) | (val &amp; m_mask)</span>
+<span class="sd">                wr_to_pkt(pkt_offset,pkt_val)</span>
+
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            fv_name : string </span>
+<span class="sd">                The stream variable name to write to a packet field</span>
+
+<span class="sd">            pkt_cast_size : uint8_t </span>
+<span class="sd">                The size in bytes of the packet field</span>
+
+
+<span class="sd">            mask          : uint32_t </span>
+<span class="sd">                The mask of the field. 1 means to write. 0 don&#39;t care</span>
+
+<span class="sd">            shift          : uint8_t </span>
+<span class="sd">                How many bits to shift </span>
+
+<span class="sd">            pkt_offset : string or in</span>
+<span class="sd">                the name of the field or offset in byte from packet start.</span>
+
+<span class="sd">            offset_fixup : int </span>
+<span class="sd">                how many bytes to go forward. In case of a negative value go backward </span>
+
+<span class="sd">             add_val     : int</span>
+<span class="sd">                value to add to stream variable before writing it to packet field. can be used as a constant offset </span>
+
+<span class="sd">             is_big      : bool </span>
+<span class="sd">                how to write the variable to the the packet. is it big-edian or little edian </span>
+
+<span class="sd">        Example 1- casting from uint16_t (var) to uint8_t (pkt)::</span>
+
+
+<span class="sd">            base_pkt =  Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+
+<span class="sd">            vm = STLScVmRaw( [ STLVmFlowVar(name=&quot;mac_src&quot;, </span>
+<span class="sd">                                            min_value=1, </span>
+<span class="sd">                                            max_value=30, </span>
+<span class="sd">                                            size=2, </span>
+<span class="sd">                                            op=&quot;dec&quot;,step=1), </span>
+<span class="sd">                               STLVmWrMaskFlowVar(fv_name=&quot;mac_src&quot;, </span>
+<span class="sd">                                                  pkt_offset= 11,</span>
+<span class="sd">                                                  pkt_cast_size=1, </span>
+<span class="sd">                                                  mask=0xff) # mask command -&gt;write it as one byte</span>
+<span class="sd">                          ]</span>
+<span class="sd">                       )</span>
+
+<span class="sd">            pkt = Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+
+<span class="sd">        Example 2- change MSB of uint16_t variable::</span>
+
+
+<span class="sd">            vm = STLScVmRaw( [ STLVmFlowVar(name=&quot;mac_src&quot;, </span>
+<span class="sd">                                            min_value=1, </span>
+<span class="sd">                                            max_value=30, </span>
+<span class="sd">                                            size=2, op=&quot;dec&quot;,step=1), </span>
+<span class="sd">                               STLVmWrMaskFlowVar(fv_name=&quot;mac_src&quot;, </span>
+<span class="sd">                                                  pkt_offset= 10,</span>
+<span class="sd">                                                  pkt_cast_size=2, </span>
+<span class="sd">                                                  mask=0xff00,</span>
+<span class="sd">                                                  shift=8) # take the var shift it 8 (x256) write only to LSB</span>
+<span class="sd">                              ]</span>
+<span class="sd">                            )</span>
+
+
+
+<span class="sd">        Example 3- Every 2 packet change the MAC (shift right)::</span>
+
+<span class="sd">                vm = STLScVmRaw( [ STLVmFlowVar(name=&quot;mac_src&quot;, </span>
+<span class="sd">                                                min_value=1, </span>
+<span class="sd">                                                max_value=30, </span>
+<span class="sd">                                                size=2, op=&quot;dec&quot;,step=1), </span>
+<span class="sd">                                   STLVmWrMaskFlowVar(fv_name=&quot;mac_src&quot;, </span>
+<span class="sd">                                                      pkt_offset= 10,</span>
+<span class="sd">                                                      pkt_cast_size=1, </span>
+<span class="sd">                                                      mask=0x1,</span>
+<span class="sd">                                                      shift=-1) # take var mac_src&gt;&gt;1 and write the LSB every two packet there should be a change</span>
+<span class="sd">                                 ]</span>
+<span class="sd">                                )</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmWrMaskFlowVar</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span><span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offset_fixup</span> <span class="o">=</span><span class="n">offset_fixup</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">offset_fixup</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span> <span class="s">&#39;type of offset_fixup is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span><span class="n">pkt_offset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_cast_size</span> <span class="o">=</span><span class="n">pkt_cast_size</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt_cast_size</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span><span class="s">&#39;type of pkt_cast_size is not int&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pkt_cast_size</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span><span class="s">&quot;not valid cast size&quot;</span><span class="p">);</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mask</span> <span class="o">=</span> <span class="n">mask</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span><span class="s">&#39;type of mask is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shift</span> <span class="o">=</span> <span class="n">shift</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">shift</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span><span class="s">&#39;type of shift is not int&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_value</span> <span class="o">=</span> <span class="n">add_value</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">add_value</span><span class="p">)</span><span class="o">==</span><span class="nb">int</span><span class="p">,</span><span class="s">&#39;type of add_value is not int&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_big</span> <span class="o">=</span><span class="n">is_big</span><span class="p">;</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">is_big</span><span class="p">)</span><span class="o">==</span><span class="nb">bool</span><span class="p">,</span><span class="s">&#39;type of is_big_endian is not bool&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_var_ref</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span>  <span class="n">CTRexVmInsWrMaskFlowVar</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_fixup</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_cast_size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">mask</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">shift</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">add_value</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">is_big</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">parent</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
+            <span class="n">t</span><span class="o">=</span><span class="n">parent</span><span class="o">.</span><span class="n">_name_to_offset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt_offset</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+</div>
+<div class="viewcode-block" id="STLVmTrimPktSize"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLVmTrimPktSize">[docs]</a><span class="k">class</span> <span class="nc">STLVmTrimPktSize</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Trim packet size by stream variable size. This instruction will only change the total packet size and will not fix up the fields to match the new size.  </span>
+
+
+<span class="sd">    :parameters:</span>
+<span class="sd">        fv_name : string </span>
+<span class="sd">            the stream variable name. the value from this variable would be the new total packet size.  </span>
+
+
+<span class="sd">    For Example::</span>
+
+<span class="sd">        def create_stream (self):</span>
+<span class="sd">            # pkt </span>
+<span class="sd">            p_l2  = Ether();</span>
+<span class="sd">            p_l3  = IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)</span>
+<span class="sd">            p_l4  = UDP(dport=12,sport=1025)</span>
+<span class="sd">            pyld_size = max(0, self.max_pkt_size_l3 - len(p_l3/p_l4));</span>
+<span class="sd">            base_pkt = p_l2/p_l3/p_l4/(&#39;\x55&#39;*(pyld_size))</span>
+<span class="sd">    </span>
+<span class="sd">            l3_len_fix =-(len(p_l2));</span>
+<span class="sd">            l4_len_fix =-(len(p_l2/p_l3));</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">            # vm</span>
+<span class="sd">            vm = STLScVmRaw( [ STLVmFlowVar(name=&quot;fv_rand&quot;, min_value=64, </span>
+<span class="sd">                                            max_value=len(base_pkt), </span>
+<span class="sd">                                            size=2, op=&quot;inc&quot;),</span>
+
+<span class="sd">                               STLVmTrimPktSize(&quot;fv_rand&quot;),                         # change total packet size &lt;&lt;&lt;</span>
+
+<span class="sd">                               STLVmWrFlowVar(fv_name=&quot;fv_rand&quot;, </span>
+<span class="sd">                                              pkt_offset= &quot;IP.len&quot;, </span>
+<span class="sd">                                              add_val=l3_len_fix), # fix ip len </span>
+
+<span class="sd">                               STLVmFixIpv4(offset = &quot;IP&quot;),                       # fix checksum</span>
+
+<span class="sd">                               STLVmWrFlowVar(fv_name=&quot;fv_rand&quot;, </span>
+<span class="sd">                                              pkt_offset= &quot;UDP.len&quot;, </span>
+<span class="sd">                                              add_val=l4_len_fix) # fix udp len  </span>
+<span class="sd">                              ]</span>
+<span class="sd">                           )</span>
+<span class="sd">    </span>
+<span class="sd">            pkt = STLPktBuilder(pkt = base_pkt,</span>
+<span class="sd">                                vm = vm)</span>
+<span class="sd">    </span>
+<span class="sd">            return STLStream(packet = pkt,</span>
+<span class="sd">                             mode = STLTXCont())</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">fv_name</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmTrimPktSize</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fv_name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">fv_name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+
+    <span class="k">def</span> <span class="nf">get_var_ref</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="n">CTRexVmInsTrimPktSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+
+</div>
+<div class="viewcode-block" id="STLVmTupleGen"><a class="viewcode-back" href="../../api/field_engine.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLVmTupleGen">[docs]</a><span class="k">class</span> <span class="nc">STLVmTupleGen</span><span class="p">(</span><span class="n">CTRexVmDescBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">name</span><span class="p">,</span> <span class="n">ip_min</span><span class="o">=</span><span class="s">&quot;0.0.0.1&quot;</span><span class="p">,</span> <span class="n">ip_max</span><span class="o">=</span><span class="s">&quot;0.0.0.10&quot;</span><span class="p">,</span> <span class="n">port_min</span><span class="o">=</span><span class="mi">1025</span><span class="p">,</span> <span class="n">port_max</span><span class="o">=</span><span class="mi">65535</span><span class="p">,</span> <span class="n">limit_flows</span><span class="o">=</span><span class="mi">100000</span><span class="p">,</span> <span class="n">flags</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a struct with two varibles. ``var_name.ip`` as uint32_t and ``var_name.port`` as uint16_t </span>
+<span class="sd">        The variable are dependent. When the ip variable is wrapped the port is getting increment. </span>
+
+<span class="sd">        For:</span>
+
+<span class="sd">        * ip_min      = 10.0.0.1</span>
+<span class="sd">        * ip_max      = 10.0.0.5</span>
+<span class="sd">        * port_min    = 1025</span>
+<span class="sd">        * port_max    = 1028</span>
+<span class="sd">        * limit_flows = 10</span>
+
+<span class="sd">        The result:</span>
+
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | ip         | port       | flow_id   | </span>
+<span class="sd">        +============+============+===========+ </span>
+<span class="sd">        | 10.0.0.1   | 1025       | 1         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.2   | 1025       | 2         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.3   | 1025       | 3         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.4   | 1025       | 4         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.5   | 1025       | 5         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.1   | 1026       | 6         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.2   | 1026       | 7         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.3   | 1026       | 8         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.4   | 1026       | 9         | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.5   | 1026       | 10        | </span>
+<span class="sd">        +------------+------------+-----------+ </span>
+<span class="sd">        | 10.0.0.1   | 1025       | 1         | </span>
+<span class="sd">        +------------+------------+-----------+</span>
+
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            name : string </span>
+<span class="sd">                The name of the stream struct. </span>
+
+<span class="sd">            ip_min : string or int </span>
+<span class="sd">                The min value of the ip value. It can be in IPv4 format</span>
+
+<span class="sd">            ip_max : string or int </span>
+<span class="sd">                The max value of the ip value. It can be in IPv4 format</span>
+
+<span class="sd">            port_min : int </span>
+<span class="sd">                min value for port variable </span>
+
+<span class="sd">            port_max : int </span>
+<span class="sd">                max value for port variable </span>
+
+<span class="sd">            limit_flows : int </span>
+<span class="sd">                The limit of number of flows </span>
+
+<span class="sd">            flags       : 0</span>
+
+<span class="sd">            =&quot;0.0.0.10&quot;, port_min=1025, port_max=65535, limit_flows=100000, flags=0</span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: Example5</span>
+
+<span class="sd">            def create_stream (self):</span>
+<span class="sd">                # pkt </span>
+<span class="sd">                p_l2  = Ether();</span>
+<span class="sd">                p_l3  = IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)</span>
+<span class="sd">                p_l4  = UDP(dport=12,sport=1025)</span>
+<span class="sd">                pyld_size = max(0, self.max_pkt_size_l3 - len(p_l3/p_l4));</span>
+<span class="sd">                base_pkt = p_l2/p_l3/p_l4/(&#39;\x55&#39;*(pyld_size))</span>
+
+<span class="sd">                l3_len_fix =-(len(p_l2));</span>
+<span class="sd">                l4_len_fix =-(len(p_l2/p_l3));</span>
+
+
+<span class="sd">                # vm</span>
+<span class="sd">                vm = STLScVmRaw( [ STLVmFlowVar(name=&quot;fv_rand&quot;, min_value=64, </span>
+<span class="sd">                                                max_value=len(base_pkt), </span>
+<span class="sd">                                                size=2, op=&quot;inc&quot;),</span>
+
+<span class="sd">                                   STLVmTrimPktSize(&quot;fv_rand&quot;),                         # change total packet size &lt;&lt;&lt;</span>
+
+<span class="sd">                                   STLVmWrFlowVar(fv_name=&quot;fv_rand&quot;, </span>
+<span class="sd">                                                  pkt_offset= &quot;IP.len&quot;, </span>
+<span class="sd">                                                  add_val=l3_len_fix), # fix ip len </span>
+
+<span class="sd">                                   STLVmFixIpv4(offset = &quot;IP&quot;),                       # fix checksum</span>
+
+<span class="sd">                                   STLVmWrFlowVar(fv_name=&quot;fv_rand&quot;, </span>
+<span class="sd">                                                  pkt_offset= &quot;UDP.len&quot;, </span>
+<span class="sd">                                                  add_val=l4_len_fix) # fix udp len  </span>
+<span class="sd">                                  ]</span>
+<span class="sd">                               )</span>
+
+<span class="sd">                pkt = STLPktBuilder(pkt = base_pkt,</span>
+<span class="sd">                                    vm = vm)</span>
+
+<span class="sd">                return STLStream(packet = pkt,</span>
+<span class="sd">                                 mode = STLTXCont())</span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLVmTupleGen</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&#39;type of fv_name is not str&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_min</span> <span class="o">=</span> <span class="n">convert_val</span><span class="p">(</span><span class="n">ip_min</span><span class="p">);</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_max</span> <span class="o">=</span> <span class="n">convert_val</span><span class="p">(</span><span class="n">ip_max</span><span class="p">);</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port_min</span> <span class="o">=</span> <span class="n">port_min</span><span class="p">;</span>
+        <span class="n">check_for_int</span> <span class="p">(</span><span class="n">port_min</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port_max</span> <span class="o">=</span> <span class="n">port_max</span><span class="p">;</span>
+        <span class="n">check_for_int</span><span class="p">(</span><span class="n">port_max</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">limit_flows</span> <span class="o">=</span> <span class="n">limit_flows</span><span class="p">;</span>
+        <span class="n">check_for_int</span><span class="p">(</span><span class="n">limit_flows</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flags</span>       <span class="o">=</span><span class="n">flags</span><span class="p">;</span>
+        <span class="n">check_for_int</span><span class="p">(</span><span class="n">flags</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_var_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;.ip&quot;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">+</span><span class="s">&quot;.port&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_obj</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span>  <span class="n">CTRexVmInsTupleGen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_max</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port_min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port_max</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit_flows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">flags</span><span class="p">);</span>
+
+
+<span class="c">################################################################################################</span>
+</div>
+<div class="viewcode-block" id="STLPktBuilder"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder">[docs]</a><span class="k">class</span> <span class="nc">STLPktBuilder</span><span class="p">(</span><span class="n">CTrexPktBuilderInterface</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pkt</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">pkt_buffer</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">vm</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">path_relative_to_profile</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">build_raw</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">remove_fcs</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        This class defines a way to build a template packet, and Field Engine using scapy package.</span>
+<span class="sd">        Using this class the user can also define how TRex will handle the packet by specifying the Field engine setting.</span>
+<span class="sd">        pkt could be Scapy pkt or pcap file name </span>
+<span class="sd">        When path_relative_to_profile is a True load pcap file from a path relative to the profile</span>
+
+<span class="sd">        </span>
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: Example6</span>
+<span class="sd">        </span>
+
+<span class="sd">                # packet is scapy</span>
+<span class="sd">                STLPktBuilder( pkt = Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)/(10*&#39;x&#39;) )</span>
+
+<span class="sd">    </span>
+<span class="sd">                # packet is taken from pcap file relative to python </span>
+<span class="sd">                STLPktBuilder( pkt =&quot;stl/yaml/udp_64B_no_crc.pcap&quot;)</span>
+<span class="sd">    </span>
+<span class="sd">                # packet is taken from pcap file relative to profile file </span>
+<span class="sd">                STLPktBuilder( pkt =&quot;stl/yaml/udp_64B_no_crc.pcap&quot;,</span>
+<span class="sd">                                    path_relative_to_profile = True )</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">                vm = STLScVmRaw( [   STLVmTupleGen ( ip_min=&quot;16.0.0.1&quot;, ip_max=&quot;16.0.0.2&quot;, </span>
+<span class="sd">                                                       port_min=1025, port_max=65535,</span>
+<span class="sd">                                                        name=&quot;tuple&quot;), # define tuple gen </span>
+<span class="sd">    </span>
+<span class="sd">                                 STLVmWrFlowVar (fv_name=&quot;tuple.ip&quot;, pkt_offset= &quot;IP.src&quot; ), # write ip to packet IP.src</span>
+<span class="sd">                                 STLVmFixIpv4(offset = &quot;IP&quot;),                                # fix checksum</span>
+<span class="sd">                                 STLVmWrFlowVar (fv_name=&quot;tuple.port&quot;, pkt_offset= &quot;UDP.sport&quot; )  #write udp.port</span>
+<span class="sd">                                 ]</span>
+<span class="sd">                               )</span>
+<span class="sd">    </span>
+<span class="sd">                base_pkt = Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+<span class="sd">                pad = max(0, size - len(base_pkt)) * &#39;x&#39;</span>
+<span class="sd">    </span>
+<span class="sd">                STLPktBuilder(pkt = base_pkt/pad, vm= vm)</span>
+
+
+<span class="sd">        :parameters:</span>
+
+<span class="sd">             pkt : string, </span>
+<span class="sd">                Scapy or pcap file filename a scapy packet </span>
+
+<span class="sd">             pkt_buffer : string </span>
+<span class="sd">                a packet as buffer </span>
+
+<span class="sd">             vm   : list or base on :class:`trex_stl_lib.trex_stl_packet_builder_scapy.STLScVmRaw`</span>
+<span class="sd">                a list of instructions to manipolate packet fields </span>
+
+<span class="sd">             path_relative_to_profile : bool </span>
+<span class="sd">                in case pkt is pcap file,  do we want to load it relative to profile file</span>
+
+<span class="sd">             build_raw : bool </span>
+<span class="sd">                Do we want to build scapy in case buffer was given. good for cases we want offset to be taken from scapy </span>
+
+<span class="sd">             remove_fcs : bool </span>
+<span class="sd">                in case of buffer do we want to remove fcs </span>
+
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLPktBuilder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">=</span> <span class="bp">None</span>     <span class="c"># as input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="o">=</span> <span class="bp">None</span> <span class="c"># from raw pcap file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vm_scripts</span> <span class="o">=</span> <span class="p">[]</span> <span class="c"># list of high level instructions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_pkt_built</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="o">=</span><span class="s">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path_relative_to_profile</span> <span class="o">=</span> <span class="n">path_relative_to_profile</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_fcs</span> <span class="o">=</span> <span class="n">remove_fcs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_binary_source</span> <span class="o">=</span> <span class="n">pkt_buffer</span> <span class="o">!=</span> <span class="bp">None</span>
+
+
+        <span class="k">if</span> <span class="n">pkt</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">pkt_buffer</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">15</span><span class="p">,</span> <span class="s">&quot;packet builder cannot be provided with both pkt and pkt_buffer&quot;</span><span class="p">)</span>
+
+        <span class="c"># process packet</span>
+        <span class="k">if</span> <span class="n">pkt</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_packet</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">pkt_buffer</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_pkt_as_str</span><span class="p">(</span><span class="n">pkt_buffer</span><span class="p">)</span>
+
+        <span class="c"># process VM</span>
+        <span class="k">if</span> <span class="n">vm</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vm</span><span class="p">,</span> <span class="p">(</span><span class="n">STLScVmRaw</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">14</span><span class="p">,</span> <span class="s">&quot;bad value for variable vm&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_command</span><span class="p">(</span><span class="n">vm</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">vm</span><span class="p">,</span> <span class="n">STLScVmRaw</span><span class="p">)</span> <span class="k">else</span> <span class="n">STLScVmRaw</span><span class="p">(</span><span class="n">vm</span><span class="p">))</span>
+
+        <span class="c"># raw source build to see MAC presence/ fields offset by name in VM</span>
+        <span class="k">if</span> <span class="n">build_raw</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__lazy_build_packet</span><span class="p">()</span>
+
+        <span class="c"># if we have packet and VM - compile now</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vm_scripts</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">dump_vm_data_as_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">print</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_vm_data</span><span class="p">(),</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="STLPktBuilder.get_vm_data"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.get_vm_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_vm_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dumps the instructions</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            None</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">            + json object of instructions</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`AssertionError`, in case VM is not compiled (is None).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">,</span> <span class="s">&#39;vm_low_level is None, please use compile()&#39;</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="STLPktBuilder.dump_pkt"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.dump_pkt">[docs]</a>    <span class="k">def</span> <span class="nf">dump_pkt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encode</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dumps the packet as a decimal array of bytes (each item x gets value between 0-255)</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            encode : bool</span>
+<span class="sd">                Encode using base64. (disable for debug)</span>
+
+<span class="sd">                Default: **True**</span>
+
+<span class="sd">        :return:</span>
+<span class="sd">            + packet representation as array of bytes</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`AssertionError`, in case packet is empty.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pkt_buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pkt_as_str</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;binary&#39;</span><span class="p">:</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">pkt_buf</span><span class="p">)</span> <span class="k">if</span> <span class="n">encode</span> <span class="k">else</span> <span class="n">pkt_buf</span><span class="p">,</span>
+                <span class="s">&#39;meta&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">metadata</span><span class="p">}</span>
+
+</div>
+    <span class="k">def</span> <span class="nf">dump_pkt_to_pcap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_path</span><span class="p">):</span>
+        <span class="n">wrpcap</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pkt_as_str</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">add_command</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">script</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vm_scripts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">script</span><span class="o">.</span><span class="n">clone</span><span class="p">());</span>
+
+    <span class="k">def</span> <span class="nf">dump_scripts</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span><span class="o">.</span><span class="n">dump_as_yaml</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">dump_as_hex</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">pkt_buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pkt_as_str</span><span class="p">()</span>
+        <span class="k">print</span> <span class="n">hexdump</span><span class="p">(</span><span class="n">pkt_buf</span><span class="p">)</span>
+
+<div class="viewcode-block" id="STLPktBuilder.pkt_layers_desc"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.pkt_layers_desc">[docs]</a>    <span class="k">def</span> <span class="nf">pkt_layers_desc</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        return layer description like this IP:TCP:Pyload</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pkt_buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pkt_as_str</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_layers_desc_from_buffer</span><span class="p">(</span><span class="n">pkt_buf</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pkt_layers_desc_from_buffer</span> <span class="p">(</span><span class="n">pkt_buf</span><span class="p">):</span>
+        <span class="n">scapy_pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="n">pkt_buf</span><span class="p">);</span>
+        <span class="n">pkt_utl</span> <span class="o">=</span> <span class="n">CTRexScapyPktUtl</span><span class="p">(</span><span class="n">scapy_pkt</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">pkt_utl</span><span class="o">.</span><span class="n">get_pkt_layers</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">set_pkt_as_str</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pkt_buffer</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt_buffer</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&quot;pkt_buffer should be string&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="o">=</span> <span class="n">pkt_buffer</span>
+
+
+<div class="viewcode-block" id="STLPktBuilder.set_pcap_file"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_pcap_file">[docs]</a>    <span class="k">def</span> <span class="nf">set_pcap_file</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pcap_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        load raw pcap file into a buffer. load only the first packet</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            pcap_file : file_name</span>
+
+<span class="sd">        :raises:</span>
+<span class="sd">            + :exc:`AssertionError`, in case packet is empty.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">f_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_pcap_file_path</span> <span class="p">(</span><span class="n">pcap_file</span><span class="p">)</span>
+
+        <span class="n">p</span><span class="o">=</span><span class="n">RawPcapReader</span><span class="p">(</span><span class="n">f_path</span><span class="p">)</span>
+        <span class="n">was_set</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">for</span> <span class="n">pkt</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+            <span class="n">was_set</span><span class="o">=</span><span class="bp">True</span><span class="p">;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pkt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">break</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">was_set</span> <span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">14</span><span class="p">,</span> <span class="s">&quot;no buffer inside the pcap file {0}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">f_path</span><span class="p">))</span>
+</div>
+    <span class="k">def</span> <span class="nf">to_pkt_dump</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Packet</span><span class="p">):</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">show2</span><span class="p">();</span>
+            <span class="n">hexdump</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+            <span class="k">return</span><span class="p">;</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">;</span>
+        <span class="k">if</span> <span class="n">p</span><span class="p">:</span>
+            <span class="n">scapy_pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+            <span class="n">scapy_pkt</span><span class="o">.</span><span class="n">show2</span><span class="p">();</span>
+            <span class="n">hexdump</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+
+
+<div class="viewcode-block" id="STLPktBuilder.set_packet"><a class="viewcode-back" href="../../api/scapy_builder.html#trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder.set_packet">[docs]</a>    <span class="k">def</span> <span class="nf">set_packet</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pkt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Scapy packet </span>
+
+<span class="sd">        For Example::</span>
+
+<span class="sd">           pkt =Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)/IP()/(&#39;x&#39;*10)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span>  <span class="nb">isinstance</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">Packet</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">pkt</span><span class="p">;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_pcap_file</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">14</span><span class="p">,</span> <span class="s">&quot;bad packet&quot;</span> <span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">is_default_src_mac</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_binary_source</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Packet</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">Ether</span><span class="p">):</span>
+                <span class="k">if</span> <span class="s">&#39;src&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">fields</span> <span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">is_default_dst_mac</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_binary_source</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">Packet</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">Ether</span><span class="p">):</span>
+                <span class="k">if</span> <span class="s">&#39;dst&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">fields</span> <span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">compile</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">14</span><span class="p">,</span> <span class="s">&quot;Packet is empty&quot;</span><span class="p">)</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span> <span class="o">=</span> <span class="n">CTRexVmEngine</span><span class="p">()</span>
+
+        <span class="c"># compile the VM</span>
+        <span class="k">for</span> <span class="n">sc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">vm_scripts</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">STLScVmRaw</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_compile_raw</span><span class="p">(</span><span class="n">sc</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_pkt_len</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">14</span><span class="p">,</span> <span class="s">&quot;Packet is empty&quot;</span><span class="p">)</span>
+
+    <span class="c">####################################################</span>
+    <span class="c"># private</span>
+
+
+    <span class="k">def</span> <span class="nf">_get_pcap_file_path</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">pcap_file_name</span><span class="p">):</span>
+        <span class="n">f_path</span> <span class="o">=</span> <span class="n">pcap_file_name</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isabs</span><span class="p">(</span><span class="n">pcap_file_name</span><span class="p">):</span>
+            <span class="n">f_path</span> <span class="o">=</span> <span class="n">pcap_file_name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path_relative_to_profile</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path_relative_to_profile</span> <span class="p">()</span> <span class="c"># loader</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="p">:</span>
+                  <span class="n">f_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">p</span><span class="p">),</span><span class="n">pcap_file_name</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">f_path</span>
+
+
+    <span class="k">def</span> <span class="nf">_get_path_relative_to_profile</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">p</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">obj</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">==</span><span class="s">&#39;get_streams&#39;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">obj</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">_compile_raw</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">obj</span><span class="p">):</span>
+
+        <span class="c"># make sure we have varibles once</span>
+        <span class="nb">vars</span><span class="o">=</span><span class="p">{};</span>
+
+        <span class="c"># add it add var to dit</span>
+        <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">commands</span><span class="p">:</span>
+            <span class="n">var_names</span> <span class="o">=</span>  <span class="n">desc</span><span class="o">.</span><span class="n">get_var_name</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">var_names</span> <span class="p">:</span>
+                <span class="k">for</span> <span class="n">var_name</span> <span class="ow">in</span> <span class="n">var_names</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">vars</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">var_name</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;variable </span><span class="si">%s</span><span class="s"> define twice &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">var_name</span><span class="p">)</span>  <span class="p">);</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">vars</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span>
+
+        <span class="c"># check that all write exits</span>
+        <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">commands</span><span class="p">:</span>
+            <span class="n">var_name</span> <span class="o">=</span>  <span class="n">desc</span><span class="o">.</span><span class="n">get_var_ref</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">var_name</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">vars</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">var_name</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,(</span><span class="s">&quot;variable </span><span class="si">%s</span><span class="s"> does not exists  &quot;</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="n">var_name</span><span class="p">)</span> <span class="p">);</span>
+            <span class="n">desc</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">);</span>
+
+        <span class="k">for</span> <span class="n">desc</span> <span class="ow">in</span> <span class="n">obj</span><span class="o">.</span><span class="n">commands</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span><span class="o">.</span><span class="n">add_ins</span><span class="p">(</span><span class="n">desc</span><span class="o">.</span><span class="n">get_obj</span><span class="p">());</span>
+
+        <span class="c"># set split_by_var</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">split_by_field</span> <span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">split_by_field</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">,</span> <span class="s">&quot;type of split by var should be string&quot;</span>
+            <span class="c">#if not vars.has_key(obj.split_by_field):</span>
+            <span class="c">#    raise CTRexPacketBuildException(-11,(&quot;variable %s does not exists. change split_by_var args &quot;) % (var_name) );</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">vm_low_level</span><span class="o">.</span><span class="n">split_by_var</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">split_by_field</span>
+
+
+    <span class="c"># lazy packet build only on demand</span>
+    <span class="k">def</span> <span class="nf">__lazy_build_packet</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># alrady built ? bail out</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_pkt_built</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c"># for buffer, promote to a scapy packet</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># regular scapy packet</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">:</span>
+            <span class="c"># should not reach here</span>
+            <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;empty packet&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_fcs</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">lastlayer</span><span class="p">()</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s">&#39;Padding&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">lastlayer</span><span class="p">()</span><span class="o">.</span><span class="n">underlayer</span><span class="o">.</span><span class="n">remove_payload</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_pkt_built</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">_pkt_layer_offset</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">layer_name</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__lazy_build_packet</span><span class="p">()</span>
+
+        <span class="n">p_utl</span><span class="o">=</span><span class="n">CTRexScapyPktUtl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">p_utl</span><span class="o">.</span><span class="n">get_layer_offet_by_str</span><span class="p">(</span><span class="n">layer_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_name_to_offset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">field_name</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__lazy_build_packet</span><span class="p">()</span>
+
+        <span class="n">p_utl</span><span class="o">=</span><span class="n">CTRexScapyPktUtl</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">);</span>
+        <span class="k">return</span> <span class="n">p_utl</span><span class="o">.</span><span class="n">get_field_offet_by_str</span><span class="p">(</span><span class="n">field_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_pkt_as_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_raw</span>
+        <span class="k">raise</span> <span class="n">CTRexPacketBuildException</span><span class="p">(</span><span class="o">-</span><span class="mi">11</span><span class="p">,</span> <span class="s">&#39;empty packet&#39;</span><span class="p">);</span>
+
+    <span class="k">def</span> <span class="nf">_add_tuple_gen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">tuple_gen</span><span class="p">):</span>
+
+        <span class="k">pass</span><span class="p">;</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

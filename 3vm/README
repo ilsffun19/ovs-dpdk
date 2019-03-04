@@ -1,0 +1,39 @@
+Before you start running the scripts, you need to edit the following files:
+start-ovs-dpdk.sh - edit the PCI ID devices which you will bind to DPDK, and other_config:dpdk-lcore-mask=0x200000 to the socket core which you want the ovs daemon to run on.
+
+set_pmd_thread.sh  - edit the core mask for 6C12T depending on the socket cores you are running. You need to set the higher priority cores.
+
+createports_pvp-6P-6c12t.sh - edit the PCI ID devices which you bind to DPDK and also the core affinity for each port
+
+power_on_vm-vhost-user-6P.sh - set the correct taskset for the cores the VM will be running on.
+
+
+./disable_service.sh
+./stop_services.sh
+cd /root/ovs-dpdk/vpp-vrouter-ovs
+./start-ovs-dpdk.sh
+./set_pmd_thread.sh
+./createports_pvp-6P-6c12t.sh
+
+cd 3vms
+./power_on_vm-vhost-user-6P.sh
+./addroutes_pvp-6P-vpp-ip.sh
+
+to connect to the VM:
+from your host, you can login to the VM via:
+ssh -l root localhost -p 2023  (for VM1)
+
+login to the VM and then run the following in the VM to start VPP:
+
+./disable_service.sh
+./stop_services.sh
+./setup_huge.sh
+systemctl start vpp
+telnet localhost 5002
+
+vpp# exec /root/vpp-vrouter/vpp-6p.conf
+
+Do VM CPU pinning to the host for optimization
+
+Setup traffic generator to arp to the VPP and then start traffic.
+
