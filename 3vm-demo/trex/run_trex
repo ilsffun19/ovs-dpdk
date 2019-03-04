@@ -1,0 +1,7 @@
+#!/bin/bash
+cd /root/
+./disable_service.sh
+./stop_services.sh
+echo "Starting Trex server"
+cd /opt/trex/v2.35/
+./t-rex-64 -i  --cfg /etc/trex_cfg-4p.yaml

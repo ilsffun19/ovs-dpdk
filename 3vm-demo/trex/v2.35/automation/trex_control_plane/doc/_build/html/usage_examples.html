@@ -1,0 +1,876 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Usage Examples &mdash; TRex Control Plane 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="TRex Control Plane 1.7.1 documentation" href="index.html" />
+    <link rel="prev" title="Stream Export YAML syntax" href="packet_generator/stream_export.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="packet_generator/stream_export.html" title="Stream Export YAML syntax"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="usage-examples">
+<h1>Usage Examples<a class="headerlink" href="#usage-examples" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="full-featured-interactive-shell">
+<h2>Full-featured interactive shell<a class="headerlink" href="#full-featured-interactive-shell" title="Permalink to this headline">¶</a></h2>
+<p>The <cite>client_interactive_example.py</cite> extends and uses the <a class="reference external" href="https://docs.python.org/2/library/cmd.html">Cmd</a> built in python class to create a Full-featured shell using which one can interact with TRex server and get instant results.</p>
+<p>The help menu of this application is:</p>
+<div class="highlight-json"><div class="highlight"><pre>usage: client_interactive_example [options]
+
+Run TRex client API demos and scenarios.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program&#39;s version number and exit
+  -t HOST, --trex-host HOST
+                        Specify the hostname or ip to connect with TRex
+                        server.
+  -p PORT, --trex-port PORT
+                        Select port on which the TRex server listens. Default
+                        port is 8090.
+  -m SIZE, --maxhist SIZE
+                        Specify maximum history size saved at client side.
+                        Default size is 100.
+  --verbose             Switch ON verbose option at TRex client. Default is:
+                        OFF.
+</pre></div>
+</div>
+<p><strong>Code Excerpt</strong></p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre>  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
+ 65
+ 66
+ 67
+ 68
+ 69
+ 70
+ 71
+ 72
+ 73
+ 74
+ 75
+ 76
+ 77
+ 78
+ 79
+ 80
+ 81
+ 82
+ 83
+ 84
+ 85
+ 86
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251</pre></div></td><td class="code"><div class="highlight"><pre><span class="c">#!/router/bin/python-2.7.4</span>
+
+<span class="kn">import</span> <span class="nn">trex_root_path</span>
+<span class="kn">from</span> <span class="nn">client.trex_client</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">common.trex_exceptions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">cmd</span>
+<span class="kn">import</span> <span class="nn">termstyle</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+
+<span class="k">class</span> <span class="nc">InteractiveTRexClient</span><span class="p">(</span><span class="n">cmd</span><span class="o">.</span><span class="n">Cmd</span><span class="p">):</span>
+
+    <span class="n">intro</span> <span class="o">=</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Interactive shell to play with Cisco&#39;s TRex API.</span><span class="se">\n</span><span class="s">Type help to view available pre-defined scenarios</span><span class="se">\n</span><span class="s">(c) All rights reserved.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+    <span class="n">prompt</span> <span class="o">=</span> <span class="s">&#39;&gt; &#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">trex_host</span><span class="p">,</span> <span class="n">max_history_size</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">trex_port</span> <span class="o">=</span> <span class="mi">8090</span><span class="p">,</span> <span class="n">verbose_mode</span> <span class="o">=</span> <span class="bp">False</span> <span class="p">):</span>
+        <span class="n">cmd</span><span class="o">.</span><span class="n">Cmd</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trex</span> <span class="o">=</span> <span class="n">CTRexClient</span><span class="p">(</span><span class="n">trex_host</span><span class="p">,</span> <span class="n">max_history_size</span><span class="p">,</span> <span class="n">trex_daemon_port</span> <span class="o">=</span> <span class="n">trex_port</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">=</span> <span class="n">verbose_mode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_RUN_PARAMS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span> <span class="n">m</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">,</span>
+                                        <span class="n">nc</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                                        <span class="n">p</span>  <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                                        <span class="n">d</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span>   
+                                        <span class="n">f</span> <span class="o">=</span> <span class="s">&#39;avl/sfr_delay_10_1g.yaml&#39;</span><span class="p">,</span>
+                                        <span class="n">l</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_RUN_PARAMS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">JSONDecoder</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">do_push_files</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepaths</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pushes a custom file to be stored locally on TRex server.\nPush multiple files by spefiying their path separated by &#39; &#39; (space).&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">filepaths</span> <span class="o">=</span> <span class="n">filepaths</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting pushing files ({trex_files}) to TRex. ***&quot;</span><span class="o">.</span><span class="n">format</span> <span class="p">(</span><span class="n">trex_files</span> <span class="o">=</span> <span class="s">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">filepaths</span><span class="p">))</span> <span class="p">)</span>
+            <span class="n">ret_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">push_files</span><span class="p">(</span><span class="n">filepaths</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ret_val</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex push_files method (success) ***&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;*** End of TRex push_files method (failed) ***&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_show_default_run_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Outputs the default TRex running parameters&quot;&quot;&quot;</span>
+        <span class="n">pprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_RUN_PARAMS</span><span class="p">)</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of default TRex running parameters ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_show_run_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Outputs the currently configured TRex running parameters&quot;&quot;&quot;</span>
+        <span class="n">pprint</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="p">)</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex running parameters ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_update_run_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates provided parameters on TRex running configuration. Provide using JSON string&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">json_str</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">upd_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">upd_params</span><span class="p">)</span>
+                <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex parameters update ***&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;Provided illegal JSON string. Please try again.</span><span class="se">\n</span><span class="s">[&quot;</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span><span class="s">&quot;]&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;JSON configuration string is missing. Please try again.&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">do_show_status</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Prompts TRex current status&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">get_running_status</span><span class="p">()</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex status prompt ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_show_trex_files_path</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Prompts the local path in which files are stored when pushed to trex server from client&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">get_trex_files_path</span><span class="p">()</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of trex_files_path prompt ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_show_reservation_status</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Prompts if TRex is currently reserved or not&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">is_reserved</span><span class="p">():</span>
+            <span class="k">print</span> <span class="s">&quot;TRex is reserved&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;TRex is NOT reserved&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of reservation status prompt ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_reserve_trex</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reserves the usage of TRex to a certain user&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">reserve_trex</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">reserve_trex</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** TRex reserved successfully ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_cancel_reservation</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Cancels a current reservation of TRex to a certain user&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">user</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">cancel_reservation</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">cancel_reservation</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39; &#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** TRex reservation canceled successfully ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_restore_run_default</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Restores original TRex running configuration&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_RUN_PARAMS</span><span class="p">)</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of restoring default run parameters ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_run_until_finish</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Starts TRex and sample server until run is done.&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex run_until_finish scenario ***&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="c"># use default sample rate if not passed</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">sample_to_run_finish</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex run ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;Provided illegal sample rate value. Please try again.</span><span class="se">\n</span><span class="s">[&quot;</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span><span class="s">&quot;]&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_run_and_poll</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Starts TRex and sample server manually until run is done.&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex run and manually poll scenario ***&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="c"># use default sample rate if not passed</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="p">)</span>
+            <span class="n">last_res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">is_running</span><span class="p">(</span><span class="n">dump_out</span> <span class="o">=</span> <span class="n">last_res</span><span class="p">):</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbose</span><span class="p">):</span>
+                    <span class="k">print</span> <span class="n">obj</span>
+                <span class="c"># do WHATEVER here</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+                
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex run ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;Provided illegal sample rate value. Please try again.</span><span class="se">\n</span><span class="s">[&quot;</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span><span class="s">&quot;]&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">do_run_until_condition</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Starts TRex and sample server until condition is satisfied.&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex run until condition is satisfied scenario ***&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">condition</span> <span class="p">(</span><span class="n">result_obj</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">result_obj</span><span class="o">.</span><span class="n">get_current_tx_rate</span><span class="p">()[</span><span class="s">&#39;m_tx_pps&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">200000</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">sample_rate</span><span class="p">:</span> <span class="c"># use default sample rate if not passed</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sample_rate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_rate</span><span class="p">)</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="p">)</span>
+            <span class="n">ret_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">sample_until_condition</span><span class="p">(</span><span class="n">condition</span><span class="p">,</span> <span class="n">sample_rate</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">ret_val</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of TRex run ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;Provided illegal sample rate value. Please try again.</span><span class="se">\n</span><span class="s">[&quot;</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span><span class="s">&quot;]&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_start_and_return</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Start TRex run and once in &#39;Running&#39; mode, return to cmd prompt&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex run, wait until in &#39;Running&#39; state ***&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">run_params</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex is probably still running!) ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_poll_once</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Performs a single poll of TRex current data dump (if TRex is running) and prompts and short version of latest result_obj&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Trying TRex single poll ***&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">last_res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">is_running</span><span class="p">(</span><span class="n">dump_out</span> <span class="o">=</span> <span class="n">last_res</span><span class="p">):</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+                <span class="k">print</span> <span class="n">obj</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;TRex isn&#39;t currently running.&quot;</span><span class="p">)</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex is posssibly still running!) ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">do_stop_trex</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Try to stop TRex run (if TRex is currently running)&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex termination ***&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">stop_trex</span><span class="p">()</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex is not running now) ***&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">TRexException</span> <span class="k">as</span> <span class="n">inst</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_kill_indiscriminately</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Force killing of running TRex process (if exists) on the server.&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** Starting TRex termination ***&quot;</span><span class="p">)</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trex</span><span class="o">.</span><span class="n">force_kill</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">ret</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">green</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex is not running now) ***&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ret</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">magenta</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex termination aborted) ***&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">red</span><span class="p">(</span><span class="s">&quot;*** End of scenario (TRex termination failed) ***&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_exit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arg</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Quits the application&quot;&quot;&quot;</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">cyan</span><span class="p">(</span><span class="s">&#39;Bye Bye!&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span> <span class="o">=</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">cyan</span><span class="p">(</span><span class="s">&#39;Run TRex client API demos and scenarios.&#39;</span><span class="p">),</span>
+        <span class="n">usage</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;client_interactive_example [options]&quot;&quot;&quot;</span> <span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--version&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&#39;version&#39;</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%(prog)s</span><span class="s"> 1.0 </span><span class="se">\t</span><span class="s"> (C) Cisco Systems Inc.</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;-t&quot;</span><span class="p">,</span> <span class="s">&quot;--trex-host&quot;</span><span class="p">,</span> <span class="n">required</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;trex_host&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s">&quot;store&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Specify the hostname or ip to connect with TRex server.&quot;</span><span class="p">,</span>
+        <span class="n">metavar</span><span class="o">=</span><span class="s">&quot;HOST&quot;</span> <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;-p&quot;</span><span class="p">,</span> <span class="s">&quot;--trex-port&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="mi">8090</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s">&quot;PORT&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;trex_port&quot;</span><span class="p">,</span> 
+        <span class="n">help</span><span class="o">=</span><span class="s">&quot;Select port on which the TRex server listens. Default port is 8090.&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&quot;store&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;-m&quot;</span><span class="p">,</span> <span class="s">&quot;--maxhist&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="mi">100</span><span class="p">,</span> <span class="n">metavar</span><span class="o">=</span><span class="s">&quot;SIZE&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;hist_size&quot;</span><span class="p">,</span> 
+        <span class="n">help</span><span class="o">=</span><span class="s">&quot;Specify maximum history size saved at client side. Default size is 100.&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s">&quot;store&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--verbose&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;verbose&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Switch ON verbose option at TRex client. Default is: OFF.&quot;</span><span class="p">,</span>
+        <span class="n">default</span> <span class="o">=</span> <span class="bp">False</span> <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">InteractiveTRexClient</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">trex_host</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">hist_size</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">trex_port</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span><span class="o">.</span><span class="n">cmdloop</span><span class="p">()</span>
+
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="k">print</span> <span class="n">termstyle</span><span class="o">.</span><span class="n">cyan</span><span class="p">(</span><span class="s">&#39;Bye Bye!&#39;</span><span class="p">)</span>
+        <span class="nb">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">errno</span><span class="o">.</span><span class="n">ECONNREFUSED</span><span class="p">,</span> <span class="s">&quot;Connection from TRex server was terminated. Please make sure the server is up.&quot;</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+</div>
+<div class="section" id="end-to-end-cycle">
+<h2>End-to-End cycle<a class="headerlink" href="#end-to-end-cycle" title="Permalink to this headline">¶</a></h2>
+<p>This example (<code class="docutils literal"><span class="pre">pkt_generation_for_trex.py</span></code>) demonstrates a full cycle of using the API.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">this module uses the <a class="reference external" href="http://www.secdev.org/projects/scapy/doc/usage.html">Scapy</a> in order to generate packets to be used as a basis of the traffic injection. It is recommended to <em>install</em> this module to best experience the example.</p>
+</div>
+<dl class="docutils">
+<dt>The demo takes the user a full circle:</dt>
+<dd><ol class="first last arabic simple">
+<li>Generating packets (using Scapy)</li>
+<li>exporting the generated packets into .pcap file named <cite>dns_traffic.pcap</cite>.</li>
+<li>Use the <a class="reference internal" href="client_utils.html#trex_yaml_gen.CTRexYaml" title="trex_yaml_gen.CTRexYaml"><code class="xref py py-class docutils literal"><span class="pre">trex_yaml_gen.CTRexYaml</span></code></a> generator to include that pcap file in the yaml object.</li>
+<li>Export the YAML object onto a YAML file named <cite>dns_traffic.yaml</cite></li>
+<li>Push the generated files to TRex server.</li>
+<li>Run TRex based on the generated (and pushed) files.</li>
+</ol>
+</dd>
+</dl>
+<p><strong>Code Excerpt</strong> <a class="footnote-reference" href="#f1" id="id1">[1]</a></p>
+<div class="highlight-python"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94</pre></div></td><td class="code"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">trex_root_path</span>
+<span class="kn">from</span> <span class="nn">client.trex_client</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">client_utils.general_utils</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">client_utils.trex_yaml_gen</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+
+<span class="c"># import scapy package</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;scapy.runtime&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>  <span class="c"># supress scapy import warnings from being displayed</span>
+<span class="kn">from</span> <span class="nn">scapy.all</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<span class="k">def</span> <span class="nf">generate_dns_packets</span> <span class="p">(</span><span class="n">src_ip</span><span class="p">,</span> <span class="n">dst_ip</span><span class="p">):</span>
+    <span class="n">dns_rqst</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&#39;00:15:17:a7:75:a3&#39;</span><span class="p">,</span> <span class="n">dst</span><span class="o">=</span><span class="s">&#39;e0:5f:b9:69:e9:22&#39;</span><span class="p">)</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="n">src_ip</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="n">dst_ip</span><span class="p">,</span><span class="n">version</span><span class="o">=</span><span class="il">4L</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">53</span><span class="p">,</span> <span class="n">sport</span><span class="o">=</span><span class="mi">1030</span><span class="p">)</span><span class="o">/</span><span class="n">DNS</span><span class="p">(</span><span class="n">rd</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">qd</span><span class="o">=</span><span class="n">DNSQR</span><span class="p">(</span><span class="n">qname</span><span class="o">=</span><span class="s">&quot;www.cisco.com&quot;</span><span class="p">))</span>
+    <span class="n">dns_resp</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="s">&#39;e0:5f:b9:69:e9:22&#39;</span><span class="p">,</span> <span class="n">dst</span><span class="o">=</span><span class="s">&#39;00:15:17:a7:75:a3&#39;</span><span class="p">)</span><span class="o">/</span><span class="n">IP</span><span class="p">(</span><span class="n">src</span><span class="o">=</span><span class="n">dst_ip</span><span class="p">,</span><span class="n">dst</span><span class="o">=</span><span class="n">src_ip</span><span class="p">,</span><span class="n">version</span><span class="o">=</span><span class="il">4L</span><span class="p">)</span><span class="o">/</span><span class="n">UDP</span><span class="p">(</span><span class="n">dport</span><span class="o">=</span><span class="mi">1030</span><span class="p">,</span> <span class="n">sport</span><span class="o">=</span><span class="mi">53</span><span class="p">)</span><span class="o">/</span><span class="n">DNS</span><span class="p">(</span><span class="n">aa</span><span class="o">=</span><span class="il">1L</span><span class="p">,</span> <span class="n">qr</span><span class="o">=</span><span class="il">1L</span><span class="p">,</span> <span class="n">an</span><span class="o">=</span><span class="n">DNSRR</span><span class="p">(</span><span class="n">rclass</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">rrname</span><span class="o">=</span><span class="s">&#39;www.cisco.com.&#39;</span><span class="p">,</span> <span class="n">rdata</span><span class="o">=</span><span class="s">&#39;100.100.100.100&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="n">ad</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">qdcount</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">ns</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">tc</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">rd</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">ar</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">opcode</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">ra</span><span class="o">=</span><span class="il">1L</span><span class="p">,</span> <span class="n">cd</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">z</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">rcode</span><span class="o">=</span><span class="il">0L</span><span class="p">,</span> <span class="n">qd</span><span class="o">=</span><span class="n">DNSQR</span><span class="p">(</span><span class="n">qclass</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">qtype</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">qname</span><span class="o">=</span><span class="s">&#39;www.cisco.com.&#39;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">dns_rqst</span><span class="p">,</span> <span class="n">dns_resp</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">pkts_to_pcap</span> <span class="p">(</span><span class="n">pcap_filename</span><span class="p">,</span> <span class="n">packets</span><span class="p">):</span>
+    <span class="n">wrpcap</span><span class="p">(</span><span class="n">pcap_filename</span><span class="p">,</span> <span class="n">packets</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">main</span> <span class="p">(</span><span class="n">args</span><span class="p">):</span>
+    <span class="c"># instantiate TRex client</span>
+    <span class="n">trex</span> <span class="o">=</span> <span class="n">CTRexClient</span><span class="p">(</span><span class="s">&#39;trex-dan&#39;</span><span class="p">,</span> <span class="n">verbose</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Next step: .pcap generation.&quot;</span>
+        <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;Press Enter to continue...&quot;</span><span class="p">)</span>
+    <span class="c"># generate TRex traffic.</span>
+<span class="hll">    <span class="n">pkts</span> <span class="o">=</span> <span class="n">generate_dns_packets</span><span class="p">(</span><span class="s">&#39;21.0.0.2&#39;</span><span class="p">,</span> <span class="s">&#39;22.0.0.12&#39;</span><span class="p">)</span>    <span class="c"># In this case - DNS traffic (request-response)</span>
+</span>    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">generated traffic:&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;==================&quot;</span>
+    <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">pprint</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">summary</span><span class="p">())</span> <span class="p">,</span> <span class="n">pkts</span><span class="p">)</span>
+<span class="hll">    <span class="n">pkts_to_pcap</span><span class="p">(</span><span class="s">&quot;dns_traffic.pcap&quot;</span><span class="p">,</span> <span class="n">pkts</span><span class="p">)</span>				    <span class="c"># Export the generated to a .pcap file</span>
+</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Next step: .yaml generation.&quot;</span>
+        <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;Press Enter to continue...&quot;</span><span class="p">)</span>
+    <span class="c"># Generate .yaml file that uses the generated .pcap file</span>
+<span class="hll">    <span class="n">trex_files_path</span> <span class="o">=</span> <span class="n">trex</span><span class="o">.</span><span class="n">get_trex_files_path</span><span class="p">()</span>	<span class="c"># fetch the path in which packets are saved on TRex server</span>
+</span>    <span class="n">yaml_obj</span> 		<span class="o">=</span> <span class="n">CTRexYaml</span><span class="p">(</span><span class="n">trex_files_path</span><span class="p">)</span>	<span class="c"># instantiate CTRexYaml obj</span>
+
+    <span class="c"># set .yaml file parameters according to need and use</span>
+<span class="hll">    <span class="n">ret_idx</span> <span class="o">=</span> <span class="n">yaml_obj</span><span class="o">.</span><span class="n">add_pcap_file</span><span class="p">(</span><span class="s">&quot;dns_traffic.pcap&quot;</span><span class="p">)</span>
+</span>    <span class="n">yaml_obj</span><span class="o">.</span><span class="n">set_cap_info_param</span><span class="p">(</span><span class="s">&#39;cps&#39;</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="n">ret_idx</span><span class="p">)</span>
+
+    <span class="c"># export yaml_ob to .yaml file</span>
+    <span class="n">yaml_file_path</span> <span class="o">=</span> <span class="n">trex_files_path</span> <span class="o">+</span> <span class="s">&#39;dns_traffic.yaml&#39;</span>
+<span class="hll">    <span class="n">yaml_obj</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">(</span><span class="s">&#39;dns_traffic.yaml&#39;</span><span class="p">)</span>
+</span>    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">generated .yaml file:&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;====================&quot;</span>
+    <span class="n">yaml_obj</span><span class="o">.</span><span class="n">dump</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">steps</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Next step: run TRex with provided files.&quot;</span>
+        <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;Press Enter to continue...&quot;</span><span class="p">)</span>
+    <span class="c"># push all relevant files to server</span>
+<span class="hll">    <span class="n">trex</span><span class="o">.</span><span class="n">push_files</span><span class="p">(</span> <span class="n">yaml_obj</span><span class="o">.</span><span class="n">get_file_list</span><span class="p">()</span> <span class="p">)</span>
+</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Starting TRex...&quot;</span>
+<span class="hll">    <span class="n">trex</span><span class="o">.</span><span class="n">start_trex</span><span class="p">(</span><span class="n">c</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">m</span> <span class="o">=</span> <span class="mf">1.5</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">nc</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">p</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">d</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span>
+</span><span class="hll">        <span class="n">f</span> <span class="o">=</span> <span class="n">yaml_file_path</span><span class="p">,</span>             <span class="c"># &lt;-- we use out generated .yaml file here</span>
+</span><span class="hll">        <span class="n">l</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+</span>    
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;TRex state changed to &#39;Running&#39;.&quot;</span>
+        <span class="k">print</span> <span class="s">&quot;Sampling TRex in 0.2 samples/sec (single sample every 5 secs)&quot;</span>
+    
+    <span class="n">last_res</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="hll">    <span class="k">while</span> <span class="n">trex</span><span class="o">.</span><span class="n">is_running</span><span class="p">(</span><span class="n">dump_out</span> <span class="o">=</span> <span class="n">last_res</span><span class="p">):</span>
+</span><span class="hll">        <span class="k">print</span> <span class="s">&quot;CURRENT RESULT OBJECT:&quot;</span>
+</span><span class="hll">        <span class="n">obj</span> <span class="o">=</span> <span class="n">trex</span><span class="o">.</span><span class="n">get_result_obj</span><span class="p">()</span>
+</span><span class="hll">        <span class="k">print</span> <span class="n">obj</span>
+</span><span class="hll">        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span> <span class="o">=</span> <span class="s">&#39;Run TRex client API end-to-end example.&#39;</span><span class="p">,</span>
+        <span class="n">usage</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;pkt_generation_for_trex [options]&quot;&quot;&quot;</span> <span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;-s&quot;</span><span class="p">,</span> <span class="s">&quot;--step-by-step&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;steps&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_false&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Switch OFF step-by-step script overview. Default is: ON.&quot;</span><span class="p">,</span> 
+        <span class="n">default</span> <span class="o">=</span> <span class="bp">True</span> <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&quot;--verbose&quot;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s">&quot;verbose&quot;</span><span class="p">,</span>
+        <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s">&quot;Switch ON verbose option at TRex client. Default is: OFF.&quot;</span><span class="p">,</span>
+        <span class="n">default</span> <span class="o">=</span> <span class="bp">False</span> <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</td></tr></table></div>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>The marked codelines corresponds with the steps mentioned above.</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Usage Examples</a><ul>
+<li><a class="reference internal" href="#full-featured-interactive-shell">Full-featured interactive shell</a></li>
+<li><a class="reference internal" href="#end-to-end-cycle">End-to-End cycle</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="packet_generator/stream_export.html"
+                        title="previous chapter">Stream Export YAML syntax</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/usage_examples.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="packet_generator/stream_export.html" title="Stream Export YAML syntax"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">TRex Control Plane 1.7.1 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-75220362-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+  </body>
+</html>

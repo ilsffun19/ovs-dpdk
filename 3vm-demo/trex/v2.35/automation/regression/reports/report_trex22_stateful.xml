@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="1" errors="0" failures="0" skip="0"><testcase classname="stateful_tests.trex_tcp_test.CTRexTcp_Test" name="test_tcp_http" time="129.835"><system-out><![CDATA[
+LATEST RESULT OBJECT:
+Is valid history?       True
+Done warmup?            True
+Expected tx rate:       {u'm_tx_expected_pps': 102712.0, u'm_tx_expected_bps': 767797184.0, u'm_tx_expected_cps': 2776.0}
+Current tx rate:        {u'm_tx_bps': 493730656.0, u'm_tx_cps': 1733.6, u'm_tx_pps': 59292.6}
+Minimum latency:        None
+Maximum latency:        None
+Average latency:        None
+Average window latency: None
+Total drops:            -3
+Drop rate:              0.0
+History size so far:    100
+
+
+LATEST DUMP:
+TRex CPU utilization: 7.04%, norm_cpu is : 11.17 Gb/core
+Err percent: 55.3295027237
+{u'client': {u'all': {u'__last': 0,
+                      u'm_active_flows': 6664,
+                      u'm_avg_size': 943.4,
+                      u'm_est_flows': 6658,
+                      u'm_rx_bw_l7_r': 454396759.6,
+                      u'm_rx_pps_r': 45067.7,
+                      u'm_tx_bw_l7_r': 3452889.5,
+                      u'm_tx_pps_r': 15600.2,
+                      u'tcps_closed': 326458,
+                      u'tcps_connattempt': 333122,
+                      u'tcps_connects': 333116,
+                      u'tcps_delack': 1661442,
+                      u'tcps_preddat': 7310550,
+                      u'tcps_rcvackbyte': 83276365,
+                      u'tcps_rcvackpack': 664837,
+                      u'tcps_rcvbyte': 10890213848,
+                      u'tcps_rcvpack': 7975387,
+                      u'tcps_rttupdated': 997953,
+                      u'tcps_segstimed': 997968,
+                      u'tcps_sndacks': 2324898,
+                      u'tcps_sndbyte': 82945884,
+                      u'tcps_sndctrl': 333122,
+                      u'tcps_sndpack': 333116,
+                      u'tcps_sndtotal': 2991136}},
+ u'server': {u'all': {u'__last': 0,
+                      u'm_active_flows': 6660,
+                      u'm_avg_size': 943.3,
+                      u'm_est_flows': 6656,
+                      u'm_rx_bw_l7_r': 3452562.2,
+                      u'm_rx_pps_r': 17333.5,
+                      u'm_tx_bw_l7_r': 454373990.7,
+                      u'm_tx_pps_r': 43332.7,
+                      u'tcps_accepts': 333116,
+                      u'tcps_closed': 326456,
+                      u'tcps_connects': 333112,
+                      u'tcps_rcvackbyte': 10882856386,
+                      u'tcps_rcvackpack': 2657990,
+                      u'tcps_rcvbyte': 82944888,
+                      u'tcps_rcvpack': 664840,
+                      u'tcps_rttupdated': 2657990,
+                      u'tcps_segstimed': 2659384,
+                      u'tcps_sndacks': 664844,
+                      u'tcps_sndbyte': 10890223984,
+                      u'tcps_sndpack': 7643668,
+                      u'tcps_sndtotal': 8308512}}}
+]]></system-out></testcase></testsuite>

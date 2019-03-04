@@ -1,0 +1,1104 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>trex_stl_lib.trex_stl_streams &mdash; TRex Stateless Python API 1.7.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.7.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="TRex Stateless Python API 1.7.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for trex_stl_lib.trex_stl_streams</h1><div class="highlight"><pre>
+<span class="c">#!/router/bin/python</span>
+
+<span class="kn">from</span> <span class="nn">trex_stl_exceptions</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">trex_stl_types</span> <span class="kn">import</span> <span class="n">verify_exclusive_arg</span><span class="p">,</span> <span class="n">validate_type</span>
+<span class="kn">from</span> <span class="nn">trex_stl_packet_builder_interface</span> <span class="kn">import</span> <span class="n">CTrexPktBuilderInterface</span>
+<span class="kn">from</span> <span class="nn">trex_stl_packet_builder_scapy</span> <span class="kn">import</span> <span class="n">STLPktBuilder</span><span class="p">,</span> <span class="n">Ether</span><span class="p">,</span> <span class="n">IP</span><span class="p">,</span> <span class="n">UDP</span><span class="p">,</span> <span class="n">TCP</span><span class="p">,</span> <span class="n">RawPcapReader</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">scapy.utils</span> <span class="kn">import</span> <span class="n">ltoa</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">import</span> <span class="nn">string</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">types</span> <span class="kn">import</span> <span class="n">NoneType</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="c"># base class for TX mode</span>
+<div class="viewcode-block" id="STLTXMode"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLTXMode">[docs]</a><span class="k">class</span> <span class="nc">STLTXMode</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; mode rate speed &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pps</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">bps_L1</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">bps_L2</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">percentage</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Speed could be in packet per second (pps) or L2/L1 bps or port precent </span>
+<span class="sd">        only one of them is valid. </span>
+<span class="sd">        you can enter pps =10000 oe bps_L1=10</span>
+
+<span class="sd">        :parameters:</span>
+<span class="sd">            pps : float </span>
+<span class="sd">               packet per second </span>
+
+<span class="sd">            bps_L1 : float</span>
+<span class="sd">               bit per second L1 (with IPG) </span>
+
+<span class="sd">            bps_L2 : float </span>
+<span class="sd">               bit per second L2 (Ethernet-FCS) </span>
+
+<span class="sd">            percentage : float </span>
+<span class="sd">               link interface precent  0-100 e.g. 10 is 10%% of the port link setup </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLTXMode Example</span>
+
+<span class="sd">                mode = STLTXCont(pps = 10)</span>
+
+<span class="sd">                mode = STLTXCont(bps_L1 = 10000000) #10mbps L1</span>
+
+<span class="sd">                mode = STLTXCont(bps_L2 = 10000000) #10mbps L2</span>
+
+<span class="sd">                mode = STLTXCont(percentage = 10)   #10%</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">pps</span><span class="p">,</span> <span class="n">bps_L1</span><span class="p">,</span> <span class="n">bps_L2</span><span class="p">,</span> <span class="n">percentage</span><span class="p">]</span>
+
+        <span class="c"># default</span>
+        <span class="k">if</span> <span class="nb">all</span><span class="p">([</span><span class="n">x</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">args</span><span class="p">]):</span>
+            <span class="n">pps</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">verify_exclusive_arg</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;rate&#39;</span><span class="p">:</span> <span class="p">{}}</span>
+
+        <span class="k">if</span> <span class="n">pps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;pps&#39;</span><span class="p">,</span> <span class="n">pps</span><span class="p">,</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="s">&#39;pps&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pps</span>
+
+        <span class="k">elif</span> <span class="n">bps_L1</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;bps_L1&#39;</span><span class="p">,</span> <span class="n">bps_L1</span><span class="p">,</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="s">&#39;bps_L1&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bps_L1</span>
+
+        <span class="k">elif</span> <span class="n">bps_L2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;bps_L2&#39;</span><span class="p">,</span> <span class="n">bps_L2</span><span class="p">,</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="s">&#39;bps_L2&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bps_L2</span>
+
+        <span class="k">elif</span> <span class="n">percentage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;percentage&#39;</span><span class="p">,</span> <span class="n">percentage</span><span class="p">,</span> <span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">percentage</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">percentage</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;percentage&#39;</span><span class="p">,</span> <span class="n">percentage</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="s">&#39;percentage&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">percentage</span>
+
+        
+
+    <span class="k">def</span> <span class="nf">to_json</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span>
+
+
+<span class="c"># continuous mode</span></div>
+<div class="viewcode-block" id="STLTXCont"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLTXCont">[docs]</a><span class="k">class</span> <span class="nc">STLTXCont</span><span class="p">(</span><span class="n">STLTXMode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; continuous mode &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        continuous mode</span>
+<span class="sd">        </span>
+<span class="sd">         see :class:`trex_stl_lib.trex_stl_streams.STLTXMode` for rate </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLTXCont Example</span>
+
+<span class="sd">                   mode = STLTXCont(pps = 10)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLTXCont</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;continuous&#39;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="s">&quot;Continuous&quot;</span>
+
+<span class="c"># single burst mode</span></div>
+<div class="viewcode-block" id="STLTXSingleBurst"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLTXSingleBurst">[docs]</a><span class="k">class</span> <span class="nc">STLTXSingleBurst</span><span class="p">(</span><span class="n">STLTXMode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Single burst mode &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        single burst mode</span>
+
+<span class="sd">            :parameters:</span>
+<span class="sd">                 total_pkts : int</span>
+<span class="sd">                    how many packets for this burst </span>
+
+<span class="sd">         see :class:`trex_stl_lib.trex_stl_streams.STLTXMode` for rate </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLTXSingleBurst Example</span>
+
+<span class="sd">                   mode = STLTXSingleBurst( pps = 10, total_pkts = 1)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">total_pkts</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;total_pkts&#39;</span><span class="p">,</span> <span class="n">total_pkts</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLTXSingleBurst</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;single_burst&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;total_pkts&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_pkts</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="s">&quot;Single Burst&quot;</span>
+
+<span class="c"># multi burst mode</span></div>
+<div class="viewcode-block" id="STLTXMultiBurst"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLTXMultiBurst">[docs]</a><span class="k">class</span> <span class="nc">STLTXMultiBurst</span><span class="p">(</span><span class="n">STLTXMode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Multi burst mode &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">pkts_per_burst</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                  <span class="n">ibg</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>   <span class="c"># usec not SEC</span>
+                  <span class="n">count</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Multi burst mode</span>
+
+<span class="sd">        :parameters:</span>
+
+<span class="sd">             pkts_per_burst: int </span>
+<span class="sd">                how many packets per burst </span>
+
+<span class="sd">              ibg : float </span>
+<span class="sd">                inter burst gap in usec 1000,000.0 is 1 sec</span>
+
+<span class="sd">              count : int </span>
+<span class="sd">                how many bursts </span>
+
+<span class="sd">         see :class:`trex_stl_lib.trex_stl_streams.STLTXMode` for rate </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLTXMultiBurst Example</span>
+
+<span class="sd">                   mode = STLTXMultiBurst(pps = 10, pkts_per_burst = 1,count 10, ibg=10.0)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pkts_per_burst</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;pkts_per_burst&#39;</span><span class="p">,</span> <span class="n">pkts_per_burst</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ibg</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;ibg&#39;</span><span class="p">,</span> <span class="n">ibg</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">count</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;count&#39;</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">STLTXMultiBurst</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;multi_burst&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;pkts_per_burst&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pkts_per_burst</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ibg&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ibg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">count</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="s">&quot;Multi Burst&quot;</span>
+</div>
+<span class="n">STLStreamDstMAC_CFG_FILE</span><span class="o">=</span><span class="mi">0</span>
+<span class="n">STLStreamDstMAC_PKT</span>     <span class="o">=</span><span class="mi">1</span>
+<span class="n">STLStreamDstMAC_ARP</span>     <span class="o">=</span><span class="mi">2</span>
+
+<span class="c"># RX stats class</span>
+<div class="viewcode-block" id="STLFlowStats"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLFlowStats">[docs]</a><span class="k">class</span> <span class="nc">STLFlowStats</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Define per stream stats  </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLFlowStats Example</span>
+
+<span class="sd">            flow_stats = STLFlowStats(pg_id = 7)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pg_id</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">]</span>         <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;stream_id&#39;</span><span class="p">]</span>       <span class="o">=</span> <span class="n">pg_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;seq_enabled&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;latency_enabled&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+
+
+<div class="viewcode-block" id="STLFlowStats.to_json"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLFlowStats.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; dump as json&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">defaults</span> <span class="p">():</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s">&#39;enabled&#39;</span> <span class="p">:</span> <span class="bp">False</span><span class="p">}</span>
+</div>
+<div class="viewcode-block" id="STLStream"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream">[docs]</a><span class="k">class</span> <span class="nc">STLStream</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; One stream object, include mode, Field Engine mode packet template and Rx stats  </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLStream Example</span>
+
+
+<span class="sd">            base_pkt =  Ether()/IP(src=&quot;16.0.0.1&quot;,dst=&quot;48.0.0.1&quot;)/UDP(dport=12,sport=1025)</span>
+<span class="sd">            pad = max(0, size - len(base_pkt)) * &#39;x&#39;</span>
+
+<span class="sd">            STLStream( isg = 10.0, # star in delay </span>
+<span class="sd">                       name    =&#39;S0&#39;,</span>
+<span class="sd">                       packet = STLPktBuilder(pkt = base_pkt/pad),</span>
+<span class="sd">                       mode = STLTXSingleBurst( pps = 10, total_pkts = 1),</span>
+<span class="sd">                       next = &#39;S1&#39;), # point to next stream </span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                  <span class="n">name</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="n">packet</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="n">pps</span> <span class="o">=</span> <span class="mi">1</span><span class="p">),</span>
+                  <span class="n">enabled</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                  <span class="n">self_start</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                  <span class="n">isg</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+                  <span class="n">flow_stats</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="nb">next</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="n">stream_id</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="n">action_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                  <span class="n">random_seed</span> <span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">mac_src_override_by_pkt</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                  <span class="n">mac_dst_override_mode</span><span class="o">=</span><span class="bp">None</span>    <span class="c">#see  STLStreamDstMAC_xx</span>
+                  <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Stream object </span>
+
+<span class="sd">        :parameters:</span>
+
+<span class="sd">                  name  : string </span>
+<span class="sd">                       The name of the stream. Needed if this stream is dependent on another stream and another stream need to refer to this stream by its name.</span>
+
+<span class="sd">                  packet :  STLPktBuilder see :class:`trex_stl_lib.trex_stl_packet_builder_scapy.STLPktBuilder`</span>
+<span class="sd">                       The template packet and field engine program e.g. packet = STLPktBuilder(pkt = base_pkt/pad) </span>
+
+<span class="sd">                  mode :  :class:`trex_stl_lib.trex_stl_streams.STLTXCont` or :class:`trex_stl_lib.trex_stl_streams.STLTXSingleBurst`  or  :class:`trex_stl_lib.trex_stl_streams.STLTXMultiBurst` </span>
+
+<span class="sd">                  enabled : bool </span>
+<span class="sd">                      if the stream is enabled. </span>
+
+<span class="sd">                  self_start : bool </span>
+<span class="sd">                      In case it is False another stream will activate it</span>
+
+<span class="sd">                  isg : float </span>
+<span class="sd">                     Inter stream gap in usec. time to wait until stream will send the first packet  </span>
+
+<span class="sd">                  flow_stats : :class:`trex_stl_lib.trex_stl_streams.STLFlowStats` </span>
+<span class="sd">                      Per stream statistic object see STLFlowStats</span>
+
+<span class="sd">                  next : string </span>
+<span class="sd">                      The name of the stream to activate </span>
+<span class="sd">                    </span>
+<span class="sd">                  stream_id :</span>
+<span class="sd">                        for HLTAPI usage </span>
+
+<span class="sd">                  action_count : uint16_t</span>
+<span class="sd">                        In case there is a next stream how many loops until stopping. Default is zero, which mean unlimited</span>
+
+<span class="sd">                  random_seed: uint16_t </span>
+<span class="sd">                       If given the seed for this stream will be this value. Good in case you need a deterministic random value </span>
+<span class="sd">                        </span>
+<span class="sd">                  mac_src_override_by_pkt : bool </span>
+<span class="sd">                        Template packet will set src MAC </span>
+
+<span class="sd">                  mac_dst_override_mode=None : STLStreamDstMAC_xx</span>
+<span class="sd">                        Template packet will set dst MAC </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+
+        <span class="c"># type checking</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;mode&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">STLTXMode</span><span class="p">)</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;packet&#39;</span><span class="p">,</span> <span class="n">packet</span><span class="p">,</span> <span class="p">(</span><span class="n">NoneType</span><span class="p">,</span> <span class="n">CTrexPktBuilderInterface</span><span class="p">))</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;enabled&#39;</span><span class="p">,</span> <span class="n">enabled</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;self_start&#39;</span><span class="p">,</span> <span class="n">self_start</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;isg&#39;</span><span class="p">,</span> <span class="n">isg</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">))</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;stream_id&#39;</span><span class="p">,</span> <span class="n">stream_id</span><span class="p">,</span> <span class="p">(</span><span class="n">NoneType</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+        <span class="n">validate_type</span><span class="p">(</span><span class="s">&#39;random_seed&#39;</span><span class="p">,</span><span class="n">random_seed</span><span class="p">,</span><span class="nb">int</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span> <span class="o">==</span> <span class="n">STLTXCont</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">next</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;continuous stream cannot have a next stream ID&quot;</span><span class="p">)</span>
+
+        <span class="c"># tag for the stream and next - can be anything</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">next</span> <span class="o">=</span> <span class="nb">next</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac_src_override_by_pkt</span> <span class="o">=</span> <span class="n">mac_src_override_by_pkt</span> <span class="c"># save for easy construct code from stream object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mac_dst_override_mode</span> <span class="o">=</span> <span class="n">mac_dst_override_mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">stream_id</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">int_mac_src_override_by_pkt</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="n">int_mac_dst_override_mode</span>   <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+
+        <span class="k">if</span> <span class="n">mac_src_override_by_pkt</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">int_mac_src_override_by_pkt</span><span class="o">=</span><span class="mi">0</span>
+            <span class="k">if</span> <span class="n">packet</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">packet</span><span class="o">.</span><span class="n">is_default_src_mac</span> <span class="p">()</span><span class="o">==</span><span class="bp">False</span><span class="p">:</span>
+                    <span class="n">int_mac_src_override_by_pkt</span><span class="o">=</span><span class="mi">1</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">int_mac_src_override_by_pkt</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mac_src_override_by_pkt</span><span class="p">);</span>
+
+        <span class="k">if</span> <span class="n">mac_dst_override_mode</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">int_mac_dst_override_mode</span>   <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">if</span> <span class="n">packet</span> <span class="p">:</span>
+                <span class="k">if</span> <span class="n">packet</span><span class="o">.</span><span class="n">is_default_dst_mac</span> <span class="p">()</span><span class="o">==</span><span class="bp">False</span><span class="p">:</span>
+                    <span class="n">int_mac_dst_override_mode</span><span class="o">=</span><span class="n">STLStreamDstMAC_PKT</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">int_mac_dst_override_mode</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">mac_dst_override_mode</span><span class="p">);</span>
+
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flags&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">int_mac_src_override_by_pkt</span><span class="o">&amp;</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span>  <span class="p">((</span><span class="n">int_mac_dst_override_mode</span><span class="o">&amp;</span><span class="mi">3</span><span class="p">)</span><span class="o">&lt;&lt;</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;action_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">action_count</span>
+
+        <span class="c"># basic fields</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">enabled</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;self_start&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">self_start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;isg&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">isg</span>
+
+        <span class="k">if</span> <span class="n">random_seed</span> <span class="o">!=</span><span class="mi">0</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;random_seed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">random_seed</span> <span class="c"># optional</span>
+
+        <span class="c"># mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mode</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span>      <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+
+
+        <span class="c"># packet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;packet&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">packet</span><span class="p">:</span>
+            <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">()</span><span class="o">/</span><span class="n">IP</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scapy_pkt_builder</span> <span class="o">=</span> <span class="n">packet</span>
+        <span class="c"># packet builder</span>
+        <span class="n">packet</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
+
+        <span class="c"># packet and VM</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;packet&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">dump_pkt</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">]</span>     <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">get_vm_data</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;packet&#39;</span><span class="p">][</span><span class="s">&#39;binary&#39;</span><span class="p">])</span>
+
+        <span class="c"># this is heavy, calculate lazy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">packet_desc</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">flow_stats</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flow_stats&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">STLFlowStats</span><span class="o">.</span><span class="n">defaults</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flow_stats&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">flow_stats</span><span class="o">.</span><span class="n">to_json</span><span class="p">()</span>
+
+
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">s</span> <span class="o">=</span>  <span class="s">&quot;Stream Name: {0}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="s">&quot;Stream Next: {0}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="s">&quot;Stream JSON:</span><span class="se">\n</span><span class="s">{0}</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">,</span> <span class="n">indent</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span> <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;: &#39;</span><span class="p">),</span> <span class="n">sort_keys</span> <span class="o">=</span> <span class="bp">True</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+<div class="viewcode-block" id="STLStream.to_json"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.to_json">[docs]</a>    <span class="k">def</span> <span class="nf">to_json</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        return json format</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="STLStream.get_id"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_id">[docs]</a>    <span class="k">def</span> <span class="nf">get_id</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the stream id after resolution  &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span>
+
+</div>
+<div class="viewcode-block" id="STLStream.get_name"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_name">[docs]</a>    <span class="k">def</span> <span class="nf">get_name</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the stream name &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+</div>
+<div class="viewcode-block" id="STLStream.get_next"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_next">[docs]</a>    <span class="k">def</span> <span class="nf">get_next</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get next stream object &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span>
+
+</div>
+<div class="viewcode-block" id="STLStream.get_pkt"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_pkt">[docs]</a>    <span class="k">def</span> <span class="nf">get_pkt</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get packet as string &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt</span>
+</div>
+<div class="viewcode-block" id="STLStream.get_pkt_len"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_pkt_len">[docs]</a>    <span class="k">def</span> <span class="nf">get_pkt_len</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count_crc</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+       <span class="sd">&quot;&quot;&quot; Get packet number of bytes  &quot;&quot;&quot;</span>
+       <span class="n">pkt_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_pkt</span><span class="p">())</span>
+       <span class="k">if</span> <span class="n">count_crc</span><span class="p">:</span>
+           <span class="n">pkt_len</span> <span class="o">+=</span> <span class="mi">4</span>
+
+       <span class="k">return</span> <span class="n">pkt_len</span>
+
+</div>
+<div class="viewcode-block" id="STLStream.get_pkt_type"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_pkt_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_pkt_type</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get packet description for example IP:UDP &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">packet_desc</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">packet_desc</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="o">.</span><span class="n">pkt_layers_desc_from_buffer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_pkt</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">packet_desc</span>
+</div>
+    <span class="k">def</span> <span class="nf">get_mode</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="STLStream.get_rate_from_field"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.get_rate_from_field">[docs]</a>    <span class="k">def</span> <span class="nf">get_rate_from_field</span> <span class="p">(</span><span class="n">rate_json</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get rate from json  &quot;&quot;&quot;</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">rate_json</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">rate_json</span><span class="p">[</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&quot;pps&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">format_num</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="s">&quot;pps&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&quot;bps_L1&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">format_num</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="s">&quot;bps (L1)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&quot;bps_L2&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">format_num</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="s">&quot;bps (L2)&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">t</span> <span class="o">==</span> <span class="s">&quot;percentage&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">format_num</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="s">&quot;%&quot;</span><span class="p">)</span>
+</div>
+    <span class="k">def</span> <span class="nf">get_rate</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_rate_from_field</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="STLStream.to_pkt_dump"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.to_pkt_dump">[docs]</a>    <span class="k">def</span> <span class="nf">to_pkt_dump</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; print packet description from scapy  &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Stream Name: &quot;</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">scapy_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scapy_pkt_builder</span><span class="p">;</span>
+        <span class="k">if</span> <span class="n">scapy_b</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">scapy_b</span><span class="p">,</span><span class="n">STLPktBuilder</span><span class="p">):</span>
+            <span class="n">scapy_b</span><span class="o">.</span><span class="n">to_pkt_dump</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Nothing to dump&quot;</span>
+
+
+</div>
+<div class="viewcode-block" id="STLStream.to_yaml"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.to_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">to_yaml</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; convert to YAML  &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">y</span><span class="p">[</span><span class="s">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">:</span>
+            <span class="n">y</span><span class="p">[</span><span class="s">&#39;next&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span>
+
+        <span class="n">y</span><span class="p">[</span><span class="s">&#39;stream&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">)</span>
+        
+        <span class="c"># some shortcuts for YAML</span>
+        <span class="n">rate_type</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">]</span>
+        <span class="n">rate_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">]</span>
+
+        <span class="n">y</span><span class="p">[</span><span class="s">&#39;stream&#39;</span><span class="p">][</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="n">rate_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">rate_value</span>
+        <span class="k">del</span> <span class="n">y</span><span class="p">[</span><span class="s">&#39;stream&#39;</span><span class="p">][</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">y</span>
+
+    <span class="c"># returns the Python code (text) to build this stream, inside the code it will be in variable &quot;stream&quot;</span></div>
+<div class="viewcode-block" id="STLStream.to_code"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.to_code">[docs]</a>    <span class="k">def</span> <span class="nf">to_code</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; convert to Python code as profile  &quot;&quot;&quot;</span>
+        <span class="n">packet</span> <span class="o">=</span> <span class="n">Ether</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pkt</span><span class="p">)</span>
+        <span class="n">packet</span><span class="o">.</span><span class="n">hide_defaults</span><span class="p">()</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">getlayer</span><span class="p">(</span><span class="s">&#39;Raw&#39;</span><span class="p">)</span>
+        <span class="n">packet_command</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+        <span class="n">imports_arr</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="s">&#39;MPLS(&#39;</span> <span class="ow">in</span> <span class="n">packet_command</span><span class="p">:</span>
+            <span class="n">imports_arr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;from scapy.contrib.mpls import MPLS&#39;</span><span class="p">)</span>
+            
+        <span class="n">imports</span> <span class="o">=</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">imports_arr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">payload</span><span class="p">:</span>
+            <span class="n">payload</span><span class="o">.</span><span class="n">remove_payload</span><span class="p">()</span> <span class="c"># fcs etc.</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;load&#39;</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">)</span>
+            <span class="n">replchars</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">&#39;(\s|/|</span><span class="se">\&#39;</span><span class="s">|</span><span class="se">\\</span><span class="s">\|[^&#39;</span> <span class="o">+</span> <span class="n">re</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">string</span><span class="o">.</span><span class="n">printable</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;])&#39;</span><span class="p">)</span> <span class="c"># convert bad chars to hex</span>
+            <span class="n">new_data</span> <span class="o">=</span>  <span class="n">replchars</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__replchars_to_hex</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">payload_start</span> <span class="o">=</span> <span class="n">packet_command</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&quot;Raw(load=&#39;&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">payload_start</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="n">packet_command</span> <span class="o">=</span> <span class="n">packet_command</span><span class="p">[:</span><span class="n">payload_start</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">layers</span> <span class="o">=</span> <span class="n">packet_command</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">payload</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="p">)</span> <span class="ow">and</span> <span class="n">new_data</span> <span class="o">==</span> <span class="n">new_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="p">):</span>
+                <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Raw(load=&#39;</span><span class="si">%s</span><span class="s">&#39; * </span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">new_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_data</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Raw(load=&#39;</span><span class="si">%s</span><span class="s">&#39;)&quot;</span> <span class="o">%</span> <span class="n">new_data</span><span class="p">)</span>
+        <span class="n">packet_code</span> <span class="o">=</span> <span class="s">&#39;packet = (&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="s">&#39; / </span><span class="se">\n</span><span class="s">          &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">layers</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;)&#39;</span>
+        <span class="n">vm_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">inst</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">][</span><span class="s">&#39;instructions&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;flow_var&#39;</span><span class="p">:</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmFlowVar(name=&#39;{name}&#39;, size={size}, op=&#39;{op}&#39;, init_value={init_value}, min_value={min_value}, max_value={max_value}, step={step})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;write_flow_var&#39;</span><span class="p">:</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmWrFlowVar(fv_name=&#39;{name}&#39;, pkt_offset={pkt_offset}, add_val={add_value}, is_big={is_big_endian})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;write_mask_flow_var&#39;</span><span class="p">:</span>
+                <span class="n">inst</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+                <span class="n">inst</span><span class="p">[</span><span class="s">&#39;mask&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">inst</span><span class="p">[</span><span class="s">&#39;mask&#39;</span><span class="p">])</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmWrMaskFlowVar(fv_name=&#39;{name}&#39;, pkt_offset={pkt_offset}, pkt_cast_size={pkt_cast_size}, mask={mask}, shift={shift}, add_value={add_value}, is_big={is_big_endian})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;fix_checksum_ipv4&#39;</span><span class="p">:</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmFixIpv4(offset={pkt_offset})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;trim_pkt_size&#39;</span><span class="p">:</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmTrimPktSize(fv_name=&#39;{name}&#39;)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">inst</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;tuple_flow_var&#39;</span><span class="p">:</span>
+                <span class="n">inst</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+                <span class="n">inst</span><span class="p">[</span><span class="s">&#39;ip_min&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ltoa</span><span class="p">(</span><span class="n">inst</span><span class="p">[</span><span class="s">&#39;ip_min&#39;</span><span class="p">])</span>
+                <span class="n">inst</span><span class="p">[</span><span class="s">&#39;ip_max&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ltoa</span><span class="p">(</span><span class="n">inst</span><span class="p">[</span><span class="s">&#39;ip_max&#39;</span><span class="p">])</span>
+                <span class="n">vm_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STLVmTupleGen(name=&#39;{name}&#39;, ip_min=&#39;{ip_min}&#39;, ip_max=&#39;{ip_max}&#39;, port_min={port_min}, port_max={port_max}, limit_flows={limit_flows}, flags={flags})&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">inst</span><span class="p">))</span>
+        <span class="n">vm_code</span> <span class="o">=</span> <span class="s">&#39;vm = STLScVmRaw([&#39;</span> <span class="o">+</span> <span class="s">&#39;,</span><span class="se">\n</span><span class="s">                 &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">vm_list</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;], split_by_field = </span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">STLStream</span><span class="o">.</span><span class="n">__add_quotes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;split_by_var&#39;</span><span class="p">))</span>
+        <span class="n">stream_params_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;packet = STLPktBuilder(pkt = packet, vm = vm)&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">name</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;name = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">STLStream</span><span class="o">.</span><span class="n">__add_quotes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">]:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;enabled = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;self_start&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;self_start&#39;</span><span class="p">]:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;self_start = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;self_start&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;isg&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;isg&#39;</span><span class="p">]:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;isg = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;isg&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flow_stats&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flow_stats&#39;</span><span class="p">]:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;flow_stats = STLFlowStats(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;flow_stats&#39;</span><span class="p">][</span><span class="s">&#39;stream_id&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">next</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;next = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">STLStream</span><span class="o">.</span><span class="n">__add_quotes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">next</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">id</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;stream_id = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;action_count&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;action_count&#39;</span><span class="p">]:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;action_count = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;action_count&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s">&#39;random_seed&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;random_seed = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;random_seed&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">mac_src_override_by_pkt</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_src_override_by_pkt</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;mac_src_override_by_pkt = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_src_override_by_pkt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">default_STLStream</span><span class="o">.</span><span class="n">mac_dst_override_mode</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_dst_override_mode</span><span class="p">:</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;mac_dst_override_mode = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">mac_dst_override_mode</span><span class="p">)</span>
+
+        <span class="n">mode_args</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&#39;rate&#39;</span><span class="p">,</span> <span class="s">&#39;type&#39;</span><span class="p">):</span>
+                <span class="n">mode_args</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> = </span><span class="si">%s</span><span class="s">, &#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="n">mode_args</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s"> = </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;type&#39;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;mode&#39;</span><span class="p">][</span><span class="s">&#39;rate&#39;</span><span class="p">][</span><span class="s">&#39;value&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span> <span class="o">==</span> <span class="n">STLTXCont</span><span class="o">.</span><span class="n">__str__</span><span class="p">():</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;mode = STLTXCont(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">mode_args</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span> <span class="o">==</span> <span class="n">STLTXSingleBurst</span><span class="p">()</span><span class="o">.</span><span class="n">__str__</span><span class="p">():</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;mode = STLTXSingleBurst(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">mode_args</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span> <span class="o">==</span> <span class="n">STLTXMultiBurst</span><span class="p">()</span><span class="o">.</span><span class="n">__str__</span><span class="p">():</span>
+            <span class="n">stream_params_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;mode = STLTXMultiBurst(</span><span class="si">%s</span><span class="s">)&#39;</span> <span class="o">%</span> <span class="n">mode_args</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&#39;Could not determine mode: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_desc</span><span class="p">)</span>
+
+        <span class="n">stream</span> <span class="o">=</span> <span class="s">&quot;stream = STLStream(&quot;</span> <span class="o">+</span> <span class="s">&#39;,</span><span class="se">\n</span><span class="s">                   &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stream_params_list</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;)&#39;</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">imports</span><span class="p">,</span> <span class="n">packet_code</span><span class="p">,</span> <span class="n">vm_code</span><span class="p">,</span> <span class="n">stream</span><span class="p">])</span>
+
+    <span class="c"># add quoted for string, or leave as is if other type</span></div>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__add_quotes</span><span class="p">(</span><span class="n">arg</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">arg</span>
+        <span class="k">return</span> <span class="n">arg</span>
+
+    <span class="c"># used to replace non-printable characters with hex</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">__replchars_to_hex</span><span class="p">(</span><span class="n">match</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">r&#39;\x{0:02x}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">()))</span>
+
+<div class="viewcode-block" id="STLStream.dump_to_yaml"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLStream.dump_to_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">dump_to_yaml</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; print as yaml  &quot;&quot;&quot;</span>
+        <span class="n">yaml_dump</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">()],</span> <span class="n">default_flow_style</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+
+        <span class="c"># write to file if provided</span>
+        <span class="k">if</span> <span class="n">yaml_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">yaml_dump</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">yaml_dump</span>
+</div></div>
+<span class="k">class</span> <span class="nc">YAMLLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaml_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">yaml_file</span> <span class="o">=</span> <span class="n">yaml_file</span>
+
+
+    <span class="k">def</span> <span class="nf">__parse_packet</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet_dict</span><span class="p">):</span>
+
+        <span class="n">packet_type</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">packet_dict</span><span class="p">)</span><span class="o">.</span><span class="n">intersection</span><span class="p">([</span><span class="s">&#39;binary&#39;</span><span class="p">,</span> <span class="s">&#39;pcap&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">packet_type</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;packet section must contain either &#39;binary&#39; or &#39;pcap&#39;&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s">&#39;binary&#39;</span> <span class="ow">in</span> <span class="n">packet_type</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pkt_str</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">packet_dict</span><span class="p">[</span><span class="s">&#39;binary&#39;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;&#39;binary&#39; field is not a valid packet format&quot;</span><span class="p">)</span>
+
+            <span class="n">builder</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt_buffer</span> <span class="o">=</span> <span class="n">pkt_str</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="s">&#39;pcap&#39;</span> <span class="ow">in</span> <span class="n">packet_type</span><span class="p">:</span>
+            <span class="n">pcap</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yaml_path</span><span class="p">,</span> <span class="n">packet_dict</span><span class="p">[</span><span class="s">&#39;pcap&#39;</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">pcap</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;&#39;pcap&#39; - cannot find &#39;{0}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pcap</span><span class="p">))</span>
+
+            <span class="n">builder</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt</span> <span class="o">=</span> <span class="n">pcap</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">builder</span>
+
+
+    <span class="k">def</span> <span class="nf">__parse_mode</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode_obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mode_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">rate_parser</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mode_obj</span><span class="p">)</span><span class="o">.</span><span class="n">intersection</span><span class="p">([</span><span class="s">&#39;pps&#39;</span><span class="p">,</span> <span class="s">&#39;bps_L1&#39;</span><span class="p">,</span> <span class="s">&#39;bps_L2&#39;</span><span class="p">,</span> <span class="s">&#39;percentage&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rate_parser</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;&#39;rate&#39; must contain exactly one from &#39;pps&#39;, &#39;bps_L1&#39;, &#39;bps_L2&#39;, &#39;percentage&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">rate_type</span>  <span class="o">=</span> <span class="n">rate_parser</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">rate</span> <span class="o">=</span> <span class="p">{</span><span class="n">rate_type</span> <span class="p">:</span> <span class="n">mode_obj</span><span class="p">[</span><span class="n">rate_type</span><span class="p">]}</span>
+
+        <span class="n">mode_type</span> <span class="o">=</span> <span class="n">mode_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;type&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode_type</span> <span class="o">==</span> <span class="s">&#39;continuous&#39;</span><span class="p">:</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXCont</span><span class="p">(</span><span class="o">**</span><span class="n">rate</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">mode_type</span> <span class="o">==</span> <span class="s">&#39;single_burst&#39;</span><span class="p">:</span>
+            <span class="n">defaults</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">()</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span><span class="n">total_pkts</span>  <span class="o">=</span> <span class="n">mode_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;total_pkts&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;total_pkts&#39;</span><span class="p">]),</span>
+                                    <span class="o">**</span><span class="n">rate</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">mode_type</span> <span class="o">==</span> <span class="s">&#39;multi_burst&#39;</span><span class="p">:</span>
+            <span class="n">defaults</span> <span class="o">=</span> <span class="n">STLTXMultiBurst</span><span class="p">()</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXMultiBurst</span><span class="p">(</span><span class="n">pkts_per_burst</span> <span class="o">=</span> <span class="n">mode_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;pkts_per_burst&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;pkts_per_burst&#39;</span><span class="p">]),</span>
+                                   <span class="n">ibg</span>            <span class="o">=</span> <span class="n">mode_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;ibg&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;ibg&#39;</span><span class="p">]),</span>
+                                   <span class="n">count</span>          <span class="o">=</span> <span class="n">mode_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;count&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]),</span>
+                                   <span class="o">**</span><span class="n">rate</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;mode type can be &#39;continuous&#39;, &#39;single_burst&#39; or &#39;multi_burst&quot;</span><span class="p">)</span>
+
+
+        <span class="k">return</span> <span class="n">mode</span>
+
+
+
+    <span class="k">def</span> <span class="nf">__parse_flow_stats</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_stats_obj</span><span class="p">):</span>
+
+        <span class="c"># no such object</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">flow_stats_obj</span> <span class="ow">or</span> <span class="n">flow_stats_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;enabled&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+
+        <span class="n">pg_id</span> <span class="o">=</span> <span class="n">flow_stats_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;stream_id&#39;</span><span class="p">)</span> 
+        <span class="k">if</span> <span class="n">pg_id</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;enabled RX stats section must contain &#39;stream_id&#39; field&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">STLFlowStats</span><span class="p">(</span><span class="n">pg_id</span> <span class="o">=</span> <span class="n">pg_id</span><span class="p">)</span>
+
+
+    <span class="k">def</span> <span class="nf">__parse_stream</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_object</span><span class="p">):</span>
+        <span class="n">s_obj</span> <span class="o">=</span> <span class="n">yaml_object</span><span class="p">[</span><span class="s">&#39;stream&#39;</span><span class="p">]</span>
+
+        <span class="c"># parse packet</span>
+        <span class="n">packet</span> <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;packet&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">packet</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;YAML file must contain &#39;packet&#39; field&quot;</span><span class="p">)</span>
+
+        <span class="n">builder</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parse_packet</span><span class="p">(</span><span class="n">packet</span><span class="p">)</span>
+
+
+        <span class="c"># mode</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parse_mode</span><span class="p">(</span><span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;mode&#39;</span><span class="p">))</span>
+
+        <span class="c"># rx stats</span>
+        <span class="n">flow_stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__parse_flow_stats</span><span class="p">(</span><span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;flow_stats&#39;</span><span class="p">))</span>
+        
+
+        <span class="n">defaults</span> <span class="o">=</span> <span class="n">default_STLStream</span>
+        <span class="c"># create the stream</span>
+        <span class="n">stream</span> <span class="o">=</span> <span class="n">STLStream</span><span class="p">(</span><span class="n">name</span>       <span class="o">=</span> <span class="n">yaml_object</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;name&#39;</span><span class="p">),</span>
+                           <span class="n">packet</span>     <span class="o">=</span> <span class="n">builder</span><span class="p">,</span>
+                           <span class="n">mode</span>       <span class="o">=</span> <span class="n">mode</span><span class="p">,</span>
+                           <span class="n">flow_stats</span>   <span class="o">=</span> <span class="n">flow_stats</span><span class="p">,</span>
+                           <span class="n">enabled</span>    <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;enabled&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;enabled&#39;</span><span class="p">]),</span>
+                           <span class="n">self_start</span> <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;self_start&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;self_start&#39;</span><span class="p">]),</span>
+                           <span class="n">isg</span>        <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;isg&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;isg&#39;</span><span class="p">]),</span>
+                           <span class="nb">next</span>       <span class="o">=</span> <span class="n">yaml_object</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;next&#39;</span><span class="p">),</span>
+                           <span class="n">action_count</span> <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;action_count&#39;</span><span class="p">,</span> <span class="n">defaults</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;action_count&#39;</span><span class="p">]),</span>
+                           <span class="n">mac_src_override_by_pkt</span> <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;mac_src_override_by_pkt&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                           <span class="n">mac_dst_override_mode</span> <span class="o">=</span> <span class="n">s_obj</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;mac_src_override_by_pkt&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> 
+                           <span class="p">)</span>
+
+        <span class="c"># hack the VM fields for now</span>
+        <span class="k">if</span> <span class="s">&#39;vm&#39;</span> <span class="ow">in</span> <span class="n">s_obj</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">s_obj</span><span class="p">[</span><span class="s">&#39;vm&#39;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">stream</span>
+
+
+    <span class="k">def</span> <span class="nf">parse</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">yaml_file</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c"># read YAML and pass it down to stream object</span>
+            <span class="n">yaml_str</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">objects</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">yaml_str</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">yaml</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">ParserError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+
+            <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">__parse_stream</span><span class="p">(</span><span class="nb">object</span><span class="p">)</span> <span class="k">for</span> <span class="nb">object</span> <span class="ow">in</span> <span class="n">objects</span><span class="p">]</span>
+            
+            <span class="k">return</span> <span class="n">streams</span>
+
+
+<span class="c"># profile class</span>
+<div class="viewcode-block" id="STLProfile"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile">[docs]</a><span class="k">class</span> <span class="nc">STLProfile</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Describe a list of streams   </span>
+
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            :caption: STLProfile Example</span>
+
+<span class="sd">              profile =  STLProfile( [ STLStream( isg = 10.0, # star in delay </span>
+<span class="sd">                                        name    =&#39;S0&#39;,</span>
+<span class="sd">                                        packet = STLPktBuilder(pkt = base_pkt/pad),</span>
+<span class="sd">                                        mode = STLTXSingleBurst( pps = 10, total_pkts = self.burst_size),</span>
+<span class="sd">                                        next = &#39;S1&#39;), # point to next stream </span>
+
+<span class="sd">                             STLStream( self_start = False, # stream is  disabled enable trow S0</span>
+<span class="sd">                                        name    =&#39;S1&#39;,</span>
+<span class="sd">                                        packet  = STLPktBuilder(pkt = base_pkt1/pad),</span>
+<span class="sd">                                        mode    = STLTXSingleBurst( pps = 10, total_pkts = self.burst_size),</span>
+<span class="sd">                                        next    = &#39;S2&#39; ),</span>
+
+<span class="sd">                             STLStream(  self_start = False, # stream is  disabled enable trow S0</span>
+<span class="sd">                                         name   =&#39;S2&#39;,</span>
+<span class="sd">                                         packet = STLPktBuilder(pkt = base_pkt2/pad),</span>
+<span class="sd">                                         mode = STLTXSingleBurst( pps = 10, total_pkts = self.burst_size )</span>
+<span class="sd">                                        )</span>
+<span class="sd">                            ]).get_streams()</span>
+
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">streams</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">            :parameters:</span>
+
+<span class="sd">                  streams  : list of :class:`trex_stl_lib.trex_stl_streams.STLStream` </span>
+<span class="sd">                       a list of stream objects  </span>
+
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+
+        <span class="k">if</span> <span class="n">streams</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">streams</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">streams</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">streams</span> <span class="o">=</span> <span class="p">[</span><span class="n">streams</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">STLStream</span><span class="p">)</span> <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="n">streams</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="n">STLArgumentError</span><span class="p">(</span><span class="s">&#39;streams&#39;</span><span class="p">,</span> <span class="n">streams</span><span class="p">,</span> <span class="n">valid_values</span> <span class="o">=</span> <span class="n">STLStream</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">streams</span> <span class="o">=</span> <span class="n">streams</span>
+
+
+<div class="viewcode-block" id="STLProfile.get_streams"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.get_streams">[docs]</a>    <span class="k">def</span> <span class="nf">get_streams</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Get the list of stream&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span>
+</div>
+    <span class="k">def</span> <span class="nf">__str__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">stream</span><span class="p">)</span> <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">])</span>
+
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="STLProfile.load_yaml"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.load_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">load_yaml</span> <span class="p">(</span><span class="n">yaml_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; load from YAML file a profile with number of streams&quot;&quot;&quot;</span>
+
+        <span class="c"># check filename</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;file &#39;{0}&#39; does not exists&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">))</span>
+
+        <span class="n">yaml_loader</span> <span class="o">=</span> <span class="n">YAMLLoader</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span>
+        <span class="n">streams</span> <span class="o">=</span> <span class="n">yaml_loader</span><span class="o">.</span><span class="n">parse</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">STLProfile</span><span class="p">(</span><span class="n">streams</span><span class="p">)</span>
+
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="STLProfile.load_py"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.load_py">[docs]</a>    <span class="k">def</span> <span class="nf">load_py</span> <span class="p">(</span><span class="n">python_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; load from Python profile &quot;&quot;&quot;</span>
+
+        <span class="c"># check filename</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">python_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;file &#39;{0}&#39; does not exists&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">python_file</span><span class="p">))</span>
+
+        <span class="n">basedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">python_file</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">basedir</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="nb">file</span>    <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">python_file</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">module</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="nb">globals</span><span class="p">(),</span> <span class="nb">locals</span><span class="p">(),</span> <span class="p">[],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="nb">reload</span><span class="p">(</span><span class="n">module</span><span class="p">)</span> <span class="c"># reload the update </span>
+
+            <span class="n">streams</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">register</span><span class="p">()</span><span class="o">.</span><span class="n">get_streams</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">STLProfile</span><span class="p">(</span><span class="n">streams</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">tb</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()</span>
+            <span class="n">x</span> <span class="o">=</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_list</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">extract_tb</span><span class="p">(</span><span class="n">tb</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]))</span> <span class="o">+</span> <span class="n">a</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s">&quot;: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+
+            <span class="n">summary</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">Python Traceback follows:</span><span class="se">\n\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="n">x</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="n">summary</span><span class="p">)</span>
+
+
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">basedir</span><span class="p">)</span>
+
+    
+    <span class="c"># loop_count = 0 means loop forever</span></div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="STLProfile.load_pcap"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.load_pcap">[docs]</a>    <span class="k">def</span> <span class="nf">load_pcap</span> <span class="p">(</span><span class="n">pcap_file</span><span class="p">,</span> <span class="n">ipg_usec</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">speedup</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">loop_count</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">vm</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert a pcap file with a number of packets to a list of connected streams  </span>
+
+<span class="sd">        packet1-&gt;packet2-&gt;packet3 etc </span>
+
+<span class="sd">                :parameters:</span>
+
+<span class="sd">                  pcap_file  : string </span>
+<span class="sd">                       The name of the pcap file </span>
+
+<span class="sd">                  ipg_usec   : float</span>
+<span class="sd">                       The inter packet gap in usec. in case of None IPG is taken from pcap file </span>
+
+<span class="sd">                  speedup   : float </span>
+<span class="sd">                       By which factor to get IPG smaller so we will send pcap file in speedup </span>
+
+<span class="sd">                  loop_count : uint16_t </span>
+<span class="sd">                       how many loops to repeat the pcap file </span>
+<span class="sd">                    </span>
+<span class="sd">                  vm        :  list </span>
+<span class="sd">                        A list of Field engine instructions </span>
+
+<span class="sd">                 :return: STLProfile</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c"># check filename</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">pcap_file</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;file &#39;{0}&#39; does not exists&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pcap_file</span><span class="p">))</span>
+
+        <span class="c"># make sure IPG is not less than 1 usec</span>
+        <span class="k">if</span> <span class="n">ipg_usec</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;ipg_usec cannot be less than 1 usec: &#39;{0}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ipg_usec</span><span class="p">))</span>
+
+
+        <span class="n">streams</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">last_ts_usec</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">pkts</span> <span class="o">=</span> <span class="n">RawPcapReader</span><span class="p">(</span><span class="n">pcap_file</span><span class="p">)</span><span class="o">.</span><span class="n">read_all</span><span class="p">()</span>
+        
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">cap</span><span class="p">,</span> <span class="n">meta</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">pkts</span><span class="p">,</span> <span class="n">start</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="c"># IPG - if not provided, take from cap</span>
+            <span class="k">if</span> <span class="n">ipg_usec</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">ts_usec</span> <span class="o">=</span> <span class="p">(</span><span class="n">meta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span> <span class="o">+</span> <span class="n">meta</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">speedup</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ts_usec</span> <span class="o">=</span> <span class="p">(</span><span class="n">ipg_usec</span> <span class="o">*</span> <span class="n">i</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">speedup</span><span class="p">)</span>
+
+            <span class="c"># handle last packet</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">pkts</span><span class="p">):</span>
+                <span class="nb">next</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">action_count</span> <span class="o">=</span> <span class="n">loop_count</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">next</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">action_count</span> <span class="o">=</span> <span class="mi">0</span>
+
+            
+            <span class="n">streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">STLStream</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="n">i</span><span class="p">,</span>
+                                     <span class="n">packet</span> <span class="o">=</span> <span class="n">STLPktBuilder</span><span class="p">(</span><span class="n">pkt_buffer</span> <span class="o">=</span> <span class="n">cap</span><span class="p">,</span> <span class="n">vm</span> <span class="o">=</span> <span class="n">vm</span><span class="p">),</span>
+                                     <span class="n">mode</span> <span class="o">=</span> <span class="n">STLTXSingleBurst</span><span class="p">(</span><span class="n">total_pkts</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">percentage</span> <span class="o">=</span> <span class="mi">100</span><span class="p">),</span>
+                                     <span class="n">self_start</span> <span class="o">=</span> <span class="bp">True</span> <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="k">else</span> <span class="bp">False</span><span class="p">,</span>
+                                     <span class="n">isg</span> <span class="o">=</span> <span class="p">(</span><span class="n">ts_usec</span> <span class="o">-</span> <span class="n">last_ts_usec</span><span class="p">),</span>  <span class="c"># seconds to usec</span>
+                                     <span class="n">action_count</span> <span class="o">=</span> <span class="n">action_count</span><span class="p">,</span>
+                                     <span class="nb">next</span> <span class="o">=</span> <span class="nb">next</span><span class="p">))</span>
+        
+            <span class="n">last_ts_usec</span> <span class="o">=</span> <span class="n">ts_usec</span>
+
+
+        <span class="k">return</span> <span class="n">STLProfile</span><span class="p">(</span><span class="n">streams</span><span class="p">)</span>
+
+      
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="STLProfile.load"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span> <span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; load a profile by its type supported type are </span>
+<span class="sd">           * py</span>
+<span class="sd">           * yaml </span>
+<span class="sd">           * pcap file that converted to profile automaticly </span>
+
+<span class="sd">           :parameters:</span>
+<span class="sd">              filename : string as filename </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">x</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="k">else</span> <span class="bp">None</span>
+
+        <span class="k">if</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;py&#39;</span><span class="p">:</span>
+            <span class="n">profile</span> <span class="o">=</span> <span class="n">STLProfile</span><span class="o">.</span><span class="n">load_py</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">suffix</span> <span class="o">==</span> <span class="s">&#39;yaml&#39;</span><span class="p">:</span>
+            <span class="n">profile</span> <span class="o">=</span> <span class="n">STLProfile</span><span class="o">.</span><span class="n">load_yaml</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">suffix</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;cap&#39;</span><span class="p">,</span> <span class="s">&#39;pcap&#39;</span><span class="p">]:</span>
+            <span class="n">profile</span> <span class="o">=</span> <span class="n">STLProfile</span><span class="o">.</span><span class="n">load_pcap</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">speedup</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ipg_usec</span> <span class="o">=</span> <span class="mf">1e6</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">STLError</span><span class="p">(</span><span class="s">&quot;unknown profile file type: &#39;{0}&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">suffix</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">profile</span>
+</div>
+<div class="viewcode-block" id="STLProfile.dump_as_pkt"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.dump_as_pkt">[docs]</a>    <span class="k">def</span> <span class="nf">dump_as_pkt</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; dump the profile as scapy packet. in case it is raw convert to scapy and dump it&quot;&quot;&quot;</span>
+        <span class="n">cnt</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span>
+        <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;=======================&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Stream </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">cnt</span>
+            <span class="k">print</span> <span class="s">&quot;=======================&quot;</span>
+            <span class="n">cnt</span> <span class="o">=</span> <span class="n">cnt</span> <span class="o">+</span><span class="mi">1</span> 
+            <span class="n">stream</span><span class="o">.</span><span class="n">to_pkt_dump</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="STLProfile.dump_to_yaml"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.dump_to_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">dump_to_yaml</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; convert it to yaml &quot;&quot;&quot;</span>
+        <span class="n">yaml_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">stream</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">()</span> <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">]</span>
+        <span class="n">yaml_str</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">yaml_list</span><span class="p">,</span> <span class="n">default_flow_style</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+
+        <span class="c"># write to file if provided</span>
+        <span class="k">if</span> <span class="n">yaml_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">yaml_str</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">yaml_str</span>
+</div>
+<div class="viewcode-block" id="STLProfile.dump_to_code"><a class="viewcode-back" href="../../api/profile_code.html#trex_stl_lib.trex_stl_streams.STLProfile.dump_to_code">[docs]</a>    <span class="k">def</span> <span class="nf">dump_to_code</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">profile_file</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; convert it to Python native profile. yeah this is cool &quot;&quot;&quot;</span>
+        <span class="n">profile_dump</span> <span class="o">=</span> <span class="s">&#39;&#39;&#39;# !!! Auto-generated code !!!</span>
+<span class="s">from trex_stl_lib.api import *</span>
+
+<span class="s">class STLS1(object):</span>
+<span class="s">    def get_streams(self):</span>
+<span class="s">        streams = []</span>
+<span class="s">&#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">stream</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">:</span>
+            <span class="n">profile_dump</span> <span class="o">+=</span> <span class="s">&#39; &#39;</span><span class="o">*</span><span class="mi">8</span> <span class="o">+</span> <span class="n">stream</span><span class="o">.</span><span class="n">to_code</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">,</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="s">&#39; &#39;</span><span class="o">*</span><span class="mi">8</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+            <span class="n">profile_dump</span> <span class="o">+=</span> <span class="s">&#39; &#39;</span><span class="o">*</span><span class="mi">8</span> <span class="o">+</span> <span class="s">&#39;streams.append(stream)</span><span class="se">\n</span><span class="s">&#39;</span>
+        <span class="n">profile_dump</span> <span class="o">+=</span> <span class="s">&#39;&#39;&#39;</span>
+<span class="s">        return streams</span>
+
+<span class="s">def register():</span>
+<span class="s">    return STLS1()</span>
+<span class="s">&#39;&#39;&#39;</span>
+        <span class="c"># write to file if provided</span>
+        <span class="k">if</span> <span class="n">profile_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">profile_file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">profile_dump</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">profile_dump</span>
+
+
+</div>
+    <span class="k">def</span> <span class="nf">__len__</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">streams</span><span class="p">)</span>
+</div>
+<span class="n">default_STLStream</span> <span class="o">=</span> <span class="n">STLStream</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">TRex Stateless Python API 1.7.1 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2015, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

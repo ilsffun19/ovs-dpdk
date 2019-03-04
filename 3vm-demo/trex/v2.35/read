@@ -1,0 +1,6 @@
+#!/bin/bash
+rm -f /root/screenlog.0
+cd /root/trex/v2.35/
+./read_tput.sh
+./read_tput.sh
+

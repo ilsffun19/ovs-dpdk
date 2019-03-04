@@ -1,0 +1,695 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Traffic profile modules &mdash; TRex ASTF Python API 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/no_scrollbars.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="TRex ASTF Python API 2.0 documentation" href="../index.html" />
+    <link rel="up" title="TRex ASTF API Reference" href="index.html" />
+    <link rel="prev" title="TRex ASTF API Reference" href="index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="index.html" title="TRex ASTF API Reference"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex ASTF Python API 2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" accesskey="U">TRex ASTF API Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="traffic-profile-modules">
+<h1>Traffic profile modules<a class="headerlink" href="#traffic-profile-modules" title="Permalink to this headline">¶</a></h1>
+<p>The TRex ASTFProfile traffic profile define how traffic should be generated for example what is the client ip ranges, server ranges, traffic pattern etc</p>
+<p>Example1:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">get_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># ip generator</span>
+    <span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span>
+                             <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span>
+                              <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                       <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                       <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ASTFProfile</span><span class="p">(</span><span class="n">default_ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">,</span>
+                        <span class="n">cap_list</span><span class="o">=</span><span class="p">[</span><span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">cps</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>Example2:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">create_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># client commands</span>
+    <span class="n">prog_c</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+    <span class="n">prog_c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_req</span><span class="p">)</span>
+    <span class="n">prog_c</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_response</span><span class="p">))</span>
+
+    <span class="n">prog_s</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+    <span class="n">prog_s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_req</span><span class="p">))</span>
+    <span class="n">prog_s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_response</span><span class="p">)</span>
+
+    <span class="c"># ip generator</span>
+    <span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                       <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                       <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+
+    <span class="n">tcp_params</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">32768</span><span class="p">)</span>
+
+    <span class="c"># template</span>
+    <span class="n">temp_c</span> <span class="o">=</span> <span class="n">ASTFTCPClientTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_c</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">,</span> <span class="n">ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">)</span>
+    <span class="n">temp_s</span> <span class="o">=</span> <span class="n">ASTFTCPServerTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_s</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">)</span>  <span class="c"># using default association</span>
+    <span class="n">template</span> <span class="o">=</span> <span class="n">ASTFTemplate</span><span class="p">(</span><span class="n">client_template</span><span class="o">=</span><span class="n">temp_c</span><span class="p">,</span> <span class="n">server_template</span><span class="o">=</span><span class="n">temp_s</span><span class="p">)</span>
+
+    <span class="c"># profile</span>
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">ASTFProfile</span><span class="p">(</span><span class="n">default_ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">,</span> <span class="n">templates</span><span class="o">=</span><span class="n">template</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">profile</span>
+</pre></div>
+</div>
+<p>Example3:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">create_profile</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">ip_gen_c1</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.1&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen_s1</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen1</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                        <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c1</span><span class="p">,</span>
+                        <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s1</span><span class="p">)</span>
+
+    <span class="n">ip_gen_c2</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;10.0.0.1&quot;</span><span class="p">,</span> <span class="s">&quot;10.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen_s2</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;20.0.0.1&quot;</span><span class="p">,</span> <span class="s">&quot;20.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+    <span class="n">ip_gen2</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                        <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c2</span><span class="p">,</span>
+                        <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s2</span><span class="p">)</span>
+
+    <span class="n">profile</span> <span class="o">=</span> <span class="n">ASTFProfile</span><span class="p">(</span><span class="n">default_ip_gen</span><span class="o">=</span><span class="n">ip_gen1</span><span class="p">,</span> <span class="n">cap_list</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../cap2/http_get.pcap&quot;</span><span class="p">),</span>
+        <span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../cap2/http_get.pcap&quot;</span><span class="p">,</span> <span class="n">ip_gen</span><span class="o">=</span><span class="n">ip_gen2</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8080</span><span class="p">)</span>
+        <span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">profile</span>
+</pre></div>
+</div>
+<div class="section" id="astfprofile-class">
+<h2>ASTFProfile class<a class="headerlink" href="#astfprofile-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProfile">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFProfile</code><span class="sig-paren">(</span><em>default_ip_gen</em>, <em>templates=None</em>, <em>glob=None</em>, <em>cap_list=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProfile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProfile" title="Permalink to this definition">¶</a></dt>
+<dd><p>ASTF profile</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                   <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                   <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+
+<span class="k">return</span> <span class="n">ASTFProfile</span><span class="p">(</span><span class="n">default_ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">,</span>
+                    <span class="n">cap_list</span><span class="o">=</span><span class="p">[</span><span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">cps</span><span class="o">=</span><span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>Define a ASTF profile</p>
+<p>You should give either templates or cap_list (mutual exclusion).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>default_ip_gen <span class="classifier-delimiter">:</span> <span class="classifier">ASTFIPGen  <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGen" title="trex_astf_lib.trex_astf_client.ASTFIPGen"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGen</span></code></a></span></dt>
+<dd><p class="first last">tuple generator object</p>
+</dd>
+<dt>templates <span class="classifier-delimiter">:</span> <span class="classifier">ASTFTemplate see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFTemplate" title="trex_astf_lib.trex_astf_client.ASTFTemplate"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFTemplate</span></code></a></span></dt>
+<dd><p class="first last">define a list of manual templates or one template</p>
+</dd>
+<dt>glob <span class="classifier-delimiter">:</span> <span class="classifier">ASTFGlobal see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFGlobal" title="trex_astf_lib.trex_astf_client.ASTFGlobal"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFGlobal</span></code></a></span></dt>
+<dd><p class="first last">global profile information</p>
+</dd>
+<dt>cap_list <span class="classifier-delimiter">:</span> <span class="classifier">ASTFCapInfo see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFCapInfo" title="trex_astf_lib.trex_astf_client.ASTFCapInfo"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFCapInfo</span></code></a></span></dt>
+<dd><p class="first last">define a list of pcap files list in case there is no  templates</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astftemplate-class">
+<h2>ASTFTemplate class<a class="headerlink" href="#astftemplate-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFTemplate">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFTemplate</code><span class="sig-paren">(</span><em>client_template=None</em>, <em>server_template=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFTemplate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFTemplate" title="Permalink to this definition">¶</a></dt>
+<dd><p>One manual template</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># client commands</span>
+<span class="n">prog_c</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+<span class="n">prog_c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_req</span><span class="p">)</span>
+<span class="n">prog_c</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_response</span><span class="p">))</span>
+
+<span class="n">prog_s</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_req</span><span class="p">))</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_response</span><span class="p">)</span>
+
+<span class="c"># ip generator</span>
+<span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                   <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                   <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+
+<span class="n">tcp_params</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">32768</span><span class="p">)</span>
+
+<span class="c"># template</span>
+<span class="n">temp_c</span> <span class="o">=</span> <span class="n">ASTFTCPClientTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_c</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">,</span> <span class="n">ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">)</span>
+<span class="n">temp_s</span> <span class="o">=</span> <span class="n">ASTFTCPServerTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_s</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">)</span>  <span class="c"># using default association</span>
+<span class="n">template</span> <span class="o">=</span> <span class="n">ASTFTemplate</span><span class="p">(</span><span class="n">client_template</span><span class="o">=</span><span class="n">temp_c</span><span class="p">,</span> <span class="n">server_template</span><span class="o">=</span><span class="n">temp_s</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define a ASTF profile</p>
+<p>You should give either templates or cap_list (mutual exclusion).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>client_template <span class="classifier-delimiter">:</span> <span class="classifier">ASTFTCPClientTemplate see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate" title="trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate</span></code></a></span></dt>
+<dd><p class="first last">client side template info</p>
+</dd>
+<dt>server_template <span class="classifier-delimiter">:</span> <span class="classifier">ASTFTCPServerTemplate see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate" title="trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate</span></code></a></span></dt>
+<dd><p class="first last">server side template info</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfcapinfo-class">
+<h2>ASTFCapInfo class<a class="headerlink" href="#astfcapinfo-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFCapInfo">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFCapInfo</code><span class="sig-paren">(</span><em>file=None</em>, <em>cps=None</em>, <em>assoc=None</em>, <em>ip_gen=None</em>, <em>port=None</em>, <em>l7_percent=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFCapInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFCapInfo" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">cps</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">l7_percent</span><span class="o">=</span><span class="mf">10.0</span><span class="p">)</span>
+
+<span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">l7_percent</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span><span class="n">port</span><span class="o">=</span><span class="mi">8080</span><span class="p">)</span>
+
+<span class="n">ASTFCapInfo</span><span class="p">(</span><span class="nb">file</span><span class="o">=</span><span class="s">&quot;../avl/delay_10_http_browsing_0.pcap&quot;</span><span class="p">,</span><span class="n">l7_percent</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span><span class="n">port</span><span class="o">=</span><span class="mi">8080</span><span class="p">,</span><span class="n">ip_gen</span><span class="o">=</span><span class="n">Mygen</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define one template information based on pcap file analysis</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>file <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">pcap file name. Filesystem directory location is relative to the profile file in case it is not start with /</p>
+</dd>
+<dt>cps <span class="classifier-delimiter">:</span> <span class="classifier">float </span></dt>
+<dd><p class="first last">new connection per second rate</p>
+</dd>
+<dt>assoc <span class="classifier-delimiter">:</span> <span class="classifier">ASTFAssociation see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFAssociation" title="trex_astf_lib.trex_astf_client.ASTFAssociation"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFAssociation</span></code></a></span></dt>
+<dd><p class="first last">rule for server association in default take the destination port from pcap file</p>
+</dd>
+<dt>ip_gen <span class="classifier-delimiter">:</span> <span class="classifier">ASTFIPGen see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGen" title="trex_astf_lib.trex_astf_client.ASTFIPGen"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGen</span></code></a></span></dt>
+<dd><p class="first last">tuple generator for this template</p>
+</dd>
+<dt>port <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t </span></dt>
+<dd><p class="first last">Override destination port, by default is taken from pcap</p>
+</dd>
+<dt>l7_percent <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">L7 stream bandwidth percent</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astftcpservertemplate-class">
+<h2>ASTFTCPServerTemplate class<a class="headerlink" href="#astftcpservertemplate-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFTCPServerTemplate</code><span class="sig-paren">(</span><em>tcp_info=&lt;trex_astf_lib.trex_astf_client.ASTFTCPInfo object&gt;</em>, <em>program=None</em>, <em>assoc=&lt;trex_astf_lib.trex_astf_client.ASTFAssociation object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFTCPServerTemplate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFTCPServerTemplate" title="Permalink to this definition">¶</a></dt>
+<dd><p>One server side template</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># server commands</span>
+<span class="n">prog_s</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_req</span><span class="p">))</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_response</span><span class="p">)</span>
+
+
+<span class="c"># template</span>
+<span class="n">temp_s</span> <span class="o">=</span> <span class="n">ASTFTCPServerTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_s</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">)</span>  <span class="c"># using default association</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">tcp_info : ASTFTCPInfo see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFTCPInfo" title="trex_astf_lib.trex_astf_client.ASTFTCPInfo"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFTCPInfo</span></code></a></p>
+<dl class="docutils">
+<dt>program <span class="classifier-delimiter">:</span> <span class="classifier">ASTFProgram see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFProgram" title="trex_astf_lib.trex_astf_client.ASTFProgram"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFProgram</span></code></a></span></dt>
+<dd><p class="first last">L7 emulation program</p>
+</dd>
+</dl>
+<p class="last">assoc    : ASTFAssociation see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFAssociation" title="trex_astf_lib.trex_astf_client.ASTFAssociation"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFAssociation</span></code></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astftcpclienttemplate-class">
+<h2>ASTFTCPClientTemplate class<a class="headerlink" href="#astftcpclienttemplate-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFTCPClientTemplate</code><span class="sig-paren">(</span><em>ip_gen</em>, <em>cluster=&lt;trex_astf_lib.trex_astf_client.ASTFCluster object&gt;</em>, <em>tcp_info=&lt;trex_astf_lib.trex_astf_client.ASTFTCPInfo object&gt;</em>, <em>program=None</em>, <em>port=80</em>, <em>cps=1</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFTCPClientTemplate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFTCPClientTemplate" title="Permalink to this definition">¶</a></dt>
+<dd><p>One manual template</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># client commands</span>
+<span class="n">prog_c</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+<span class="n">prog_c</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_req</span><span class="p">)</span>
+<span class="n">prog_c</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_response</span><span class="p">))</span>
+
+
+<span class="c"># ip generator</span>
+<span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                   <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                   <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+
+<span class="n">tcp_params</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">32768</span><span class="p">)</span>
+
+<span class="c"># template</span>
+<span class="n">temp_c</span> <span class="o">=</span> <span class="n">ASTFTCPClientTemplate</span><span class="p">(</span><span class="n">program</span><span class="o">=</span><span class="n">prog_c</span><span class="p">,</span> <span class="n">tcp_info</span><span class="o">=</span><span class="n">tcp_params</span><span class="p">,</span> <span class="n">ip_gen</span><span class="o">=</span><span class="n">ip_gen</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first docutils">
+<dt>ip_gen <span class="classifier-delimiter">:</span> <span class="classifier">ASTFIPGen see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGen" title="trex_astf_lib.trex_astf_client.ASTFIPGen"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGen</span></code></a></span></dt>
+<dd><p class="first last">generator</p>
+</dd>
+</dl>
+<p>cluster :  ASTFCluster see <code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFCluster</span></code></p>
+<p>tcp_info : ASTFTCPInfo see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFTCPInfo" title="trex_astf_lib.trex_astf_client.ASTFTCPInfo"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFTCPInfo</span></code></a></p>
+<dl class="last docutils">
+<dt>program <span class="classifier-delimiter">:</span> <span class="classifier">ASTFProgram see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFProgram" title="trex_astf_lib.trex_astf_client.ASTFProgram"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFProgram</span></code></a></span></dt>
+<dd><p class="first last">L7 emulation program</p>
+</dd>
+<dt>port <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t</span></dt>
+<dd><p class="first last">destination port</p>
+</dd>
+<dt>cps <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">New connection per second rate</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfipgen-class">
+<h2>ASTFIPGen class<a class="headerlink" href="#astfipgen-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFIPGen">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFIPGen</code><span class="sig-paren">(</span><em>dist_client</em>, <em>dist_server</em>, <em>glob=&lt;trex_astf_lib.trex_astf_client.ASTFIPGenGlobal object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFIPGen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFIPGen" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen_s</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;48.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;48.0.255.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+<span class="n">ip_gen</span> <span class="o">=</span> <span class="n">ASTFIPGen</span><span class="p">(</span><span class="n">glob</span><span class="o">=</span><span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">),</span>
+                   <span class="n">dist_client</span><span class="o">=</span><span class="n">ip_gen_c</span><span class="p">,</span>
+                   <span class="n">dist_server</span><span class="o">=</span><span class="n">ip_gen_s</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define a ASTFIPGen generator</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">dist_client  : Client side ASTFIPGenDist  <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGenDist" title="trex_astf_lib.trex_astf_client.ASTFIPGenDist"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGenDist</span></code></a></p>
+<p>dist_server  : Server side ASTFIPGenDist  <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGenDist" title="trex_astf_lib.trex_astf_client.ASTFIPGenDist"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGenDist</span></code></a></p>
+<p class="last">glob :  ASTFIPGenGlobal see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFIPGenGlobal" title="trex_astf_lib.trex_astf_client.ASTFIPGenGlobal"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFIPGenGlobal</span></code></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfipgenglobal-class">
+<h2>ASTFIPGenGlobal class<a class="headerlink" href="#astfipgenglobal-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFIPGenGlobal">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFIPGenGlobal</code><span class="sig-paren">(</span><em>ip_offset='1.0.0.0'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFIPGenGlobal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFIPGenGlobal" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenGlobal</span><span class="p">(</span><span class="n">ip_offset</span><span class="o">=</span><span class="s">&quot;1.0.0.0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Global properties for IP generator</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body">ip_offset  : offset for dual mask ports</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfipgendist-class">
+<h2>ASTFIPGenDist class<a class="headerlink" href="#astfipgendist-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFIPGenDist">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFIPGenDist</code><span class="sig-paren">(</span><em>ip_range</em>, <em>distribution='seq'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFIPGenDist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFIPGenDist" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">ip_gen_c</span> <span class="o">=</span> <span class="n">ASTFIPGenDist</span><span class="p">(</span><span class="n">ip_range</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;16.0.0.0&quot;</span><span class="p">,</span> <span class="s">&quot;16.0.0.255&quot;</span><span class="p">],</span> <span class="n">distribution</span><span class="o">=</span><span class="s">&quot;seq&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Define a ASTFIPGenDist</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first">ip_range  : list of  min-max ip strings</p>
+<dl class="last docutils">
+<dt>distribution <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">&#8220;seq&#8221; or &#8220;rand&#8221;</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfprogram-class">
+<h2>ASTFProgram class<a class="headerlink" href="#astfprogram-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProgram">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFProgram</code><span class="sig-paren">(</span><em>file=None</em>, <em>side='c'</em>, <em>commands=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProgram"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProgram" title="Permalink to this definition">¶</a></dt>
+<dd><p>Emulation L7 program</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># server commands</span>
+<span class="n">prog_s</span> <span class="o">=</span> <span class="n">ASTFProgram</span><span class="p">()</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">http_req</span><span class="p">))</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">http_response</span><span class="p">)</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">delay</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">prog_s</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>file <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">pcap file to analyze</p>
+</dd>
+<dt>side <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">&#8220;c&#8221; for client side or &#8220;s&#8221; for server side</p>
+</dd>
+<dt>commands <span class="classifier-delimiter">:</span> <span class="classifier">list</span></dt>
+<dd><p class="first last">list of command objects cound be NULL in case you call the API</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProgram.send">
+<code class="descname">send</code><span class="sig-paren">(</span><em>l7_buffer</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProgram.send"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProgram.send" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>buf <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">l7 stream</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProgram.recv">
+<code class="descname">recv</code><span class="sig-paren">(</span><em>bytes</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProgram.recv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProgram.recv" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>bytes <span class="classifier-delimiter">:</span> <span class="classifier">uint32_t </span></dt>
+<dd><p class="first last">wait until we receive at least  x number of bytes</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProgram.delay">
+<code class="descname">delay</code><span class="sig-paren">(</span><em>msec</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProgram.delay"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProgram.delay" title="Permalink to this definition">¶</a></dt>
+<dd><p>delay for x usec</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>msec <span class="classifier-delimiter">:</span> <span class="classifier">float</span></dt>
+<dd><p class="first last">delay for this time in usec</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="trex_astf_lib.trex_astf_client.ASTFProgram.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFProgram.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFProgram.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>for TCP connection send RST to peer</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="astfassociation-class">
+<h2>ASTFAssociation class<a class="headerlink" href="#astfassociation-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFAssociation">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFAssociation</code><span class="sig-paren">(</span><em>rules=&lt;trex_astf_lib.trex_astf_client.ASTFAssociationRule object&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFAssociation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFAssociation" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">assoc</span><span class="o">=</span><span class="n">ASTFAssociationRule</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">81</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>rules <span class="classifier-delimiter">:</span> <span class="classifier">ASTFAssociationRule see <a class="reference internal" href="#trex_astf_lib.trex_astf_client.ASTFAssociationRule" title="trex_astf_lib.trex_astf_client.ASTFAssociationRule"><code class="xref py py-class docutils literal"><span class="pre">trex_astf_lib.trex_astf_client.ASTFAssociationRule</span></code></a></span></dt>
+<dd><p class="first last">rule or rules list</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfassociationrule-class">
+<h2>ASTFAssociationRule class<a class="headerlink" href="#astfassociationrule-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFAssociationRule">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFAssociationRule</code><span class="sig-paren">(</span><em>port=80</em>, <em>ip_start=None</em>, <em>ip_end=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFAssociationRule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFAssociationRule" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="c"># only port </span>
+<span class="n">assoc</span><span class="o">=</span><span class="n">ASTFAssociationRule</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">81</span><span class="p">)</span>
+
+<span class="c"># port with range or destination ips </span>
+<span class="n">assoc</span><span class="o">=</span><span class="n">ASTFAssociationRule</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">81</span><span class="p">,</span><span class="n">ip_start</span><span class="o">=</span><span class="s">&quot;48.0.0.1&quot;</span><span class="p">,</span><span class="n">ip_end</span><span class="o">=</span><span class="s">&quot;48.0.0,16&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>port <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t </span></dt>
+<dd><p class="first last">destination port</p>
+</dd>
+<dt>ip_start <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">stop ip range</p>
+</dd>
+<dt>ip_end <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">stop ip range</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="astfglobal-class">
+<h2>ASTFGlobal class<a class="headerlink" href="#astfglobal-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFGlobal">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFGlobal</code><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFGlobal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFGlobal" title="Permalink to this definition">¶</a></dt>
+<dd><p>place holder for future</p>
+</dd></dl>
+
+</div>
+<div class="section" id="astftcpinfo-class">
+<h2>ASTFTCPInfo class<a class="headerlink" href="#astftcpinfo-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="trex_astf_lib.trex_astf_client.ASTFTCPInfo">
+<em class="property">class </em><code class="descclassname">trex_astf_lib.trex_astf_client.</code><code class="descname">ASTFTCPInfo</code><span class="sig-paren">(</span><em>window=None</em>, <em>options=None</em>, <em>port=None</em>, <em>file=None</em>, <em>side='c'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/trex_astf_lib/trex_astf_client.html#ASTFTCPInfo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#trex_astf_lib.trex_astf_client.ASTFTCPInfo" title="Permalink to this definition">¶</a></dt>
+<dd><div class="highlight-python"><div class="highlight"><pre><span class="n">tcp_params</span> <span class="o">=</span> <span class="n">ASTFTCPInfo</span><span class="p">(</span><span class="n">window</span><span class="o">=</span><span class="mi">32768</span><span class="p">)</span>
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><dl class="first last docutils">
+<dt>window <span class="classifier-delimiter">:</span> <span class="classifier">uint32_t </span></dt>
+<dd><p class="first last">TCP window size default 32KB</p>
+</dd>
+<dt>side <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">&#8220;c&#8221; or &#8220;s&#8221;</p>
+</dd>
+<dt>file <span class="classifier-delimiter">:</span> <span class="classifier">string </span></dt>
+<dd><p class="first last">pcap file to learn the TCP information, in case given no need for other args</p>
+</dd>
+<dt>port <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t </span></dt>
+<dd><p class="first last">destination port</p>
+</dd>
+<dt>options <span class="classifier-delimiter">:</span> <span class="classifier">uint16_t </span></dt>
+<dd><p class="first last">not used for now</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Traffic profile modules</a><ul>
+<li><a class="reference internal" href="#astfprofile-class">ASTFProfile class</a></li>
+<li><a class="reference internal" href="#astftemplate-class">ASTFTemplate class</a></li>
+<li><a class="reference internal" href="#astfcapinfo-class">ASTFCapInfo class</a></li>
+<li><a class="reference internal" href="#astftcpservertemplate-class">ASTFTCPServerTemplate class</a></li>
+<li><a class="reference internal" href="#astftcpclienttemplate-class">ASTFTCPClientTemplate class</a></li>
+<li><a class="reference internal" href="#astfipgen-class">ASTFIPGen class</a></li>
+<li><a class="reference internal" href="#astfipgenglobal-class">ASTFIPGenGlobal class</a></li>
+<li><a class="reference internal" href="#astfipgendist-class">ASTFIPGenDist class</a></li>
+<li><a class="reference internal" href="#astfprogram-class">ASTFProgram class</a></li>
+<li><a class="reference internal" href="#astfassociation-class">ASTFAssociation class</a></li>
+<li><a class="reference internal" href="#astfassociationrule-class">ASTFAssociationRule class</a></li>
+<li><a class="reference internal" href="#astfglobal-class">ASTFGlobal class</a></li>
+<li><a class="reference internal" href="#astftcpinfo-class">ASTFTCPInfo class</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">TRex ASTF API Reference</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/api/profile_code.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="index.html" title="TRex ASTF API Reference"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">TRex ASTF Python API 2.0 documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="index.html" >TRex ASTF API Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2017, Cisco Systems Inc..
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+    </div>
+  </body>
+</html>

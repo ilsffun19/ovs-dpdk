@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="2" errors="2" failures="0" skip="0"><testcase classname="stateful_tests.trex_tcp_test.CTRexTcp_Test" name="test_ipv6_tcp_http" time="228.228"><error type="exceptions.Exception" message="Warm-up period not finished"><![CDATA[Traceback (most recent call last):
+  File "/sw/packages/python/2.7.4/lib/python2.7/unittest/case.py", line 332, in run
+    testMethod()
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/stateful_tests/trex_tcp_test.py", line 148, in test_ipv6_tcp_http
+    self.check_CPU_benchmark(trex_res)
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/stateful_tests/trex_general_test.py", line 175, in check_CPU_benchmark
+    cpu_util          = trex_res.get_avg_steady_state_value('trex-global.data.m_cpu_util_raw')
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/trex_control_plane/stf/trex_stf_lib/trex_client.py", line 1676, in get_avg_steady_state_value
+    values_arr = [self.__get_value_by_path(res, tree_path_to_key) for res in self._get_steady_state_history_iterator()]
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/trex_control_plane/stf/trex_stf_lib/trex_client.py", line 1650, in _get_steady_state_history_iterator
+    raise Exception('Warm-up period not finished')
+Exception: Warm-up period not finished
+]]></error><system-out><![CDATA[
+LATEST RESULT OBJECT:
+Is valid history?       True
+Done warmup?            False
+Expected tx rate:       {u'm_tx_expected_pps': 0.0, u'm_tx_expected_bps': 0.0, u'm_tx_expected_cps': 0.0}
+Current tx rate:        {u'm_tx_bps': 0.0, u'm_tx_cps': 8.423e-24, u'm_tx_pps': 0.0}
+Minimum latency:        {u'min-2': 10, u'min-3': 10, u'min-0': 10, u'min-1': 10}
+Maximum latency:        {u'max-0': 0, u'max-1': 0, u'max-2': 0, u'max-3': 0}
+Average latency:        {'all': 0.0, u'port2': 0.0, u'port3': 0.0, u'port0': 0.0, u'port1': 0.0}
+Average window latency: {'all': 0.0, u'port2': 0.0, u'port3': 0.0, u'port0': 0.0, u'port1': 0.0}
+Total drops:            0
+Drop rate:              0.0
+History size so far:    100
+
+
+LATEST DUMP:
+Error: LatencyError: Number of latency packets received on port-0 is 0
+Error: LatencyError: Number of latency packets received on port-1 is 0
+Error: LatencyError: Number of latency packets received on port-2 is 0
+Error: LatencyError: Number of latency packets received on port-3 is 0
+]]></system-out></testcase><testcase classname="stateful_tests.trex_tcp_test.CTRexTcp_Test" name="test_ipv6_tcp_http" time="228.247"><error type="exceptions.Exception" message="Test failed. Reasons:&#10;LatencyError: Number of latency packets received on port-0 is 0&#10;LatencyError: Number of latency packets received on port-1 is 0&#10;LatencyError: Number of latency packets received on port-2 is 0&#10;LatencyError: Number of latency packets received on port-3 is 0"><![CDATA[Traceback (most recent call last):
+  File "/sw/packages/python/2.7.4/lib/python2.7/unittest/case.py", line 361, in run
+    self.tearDown()
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/stateful_tests/trex_tcp_test.py", line 191, in tearDown
+    CTRexGeneral_Test.tearDown(self)
+  File "/auto/srg-sce-swinfra-usr/emb/users/hhaim/work/depot/asr1k/emb/private/hhaim/bp_sim_git/trex-core/scripts/automation/regression/stateful_tests/trex_general_test.py", line 472, in tearDown
+    raise Exception('Test failed. Reasons:\n%s' % '\n'.join(self.fail_reasons))
+Exception: Test failed. Reasons:
+LatencyError: Number of latency packets received on port-0 is 0
+LatencyError: Number of latency packets received on port-1 is 0
+LatencyError: Number of latency packets received on port-2 is 0
+LatencyError: Number of latency packets received on port-3 is 0
+]]></error><system-out><![CDATA[
+LATEST RESULT OBJECT:
+Is valid history?       True
+Done warmup?            False
+Expected tx rate:       {u'm_tx_expected_pps': 0.0, u'm_tx_expected_bps': 0.0, u'm_tx_expected_cps': 0.0}
+Current tx rate:        {u'm_tx_bps': 0.0, u'm_tx_cps': 8.423e-24, u'm_tx_pps': 0.0}
+Minimum latency:        {u'min-2': 10, u'min-3': 10, u'min-0': 10, u'min-1': 10}
+Maximum latency:        {u'max-0': 0, u'max-1': 0, u'max-2': 0, u'max-3': 0}
+Average latency:        {'all': 0.0, u'port2': 0.0, u'port3': 0.0, u'port0': 0.0, u'port1': 0.0}
+Average window latency: {'all': 0.0, u'port2': 0.0, u'port3': 0.0, u'port0': 0.0, u'port1': 0.0}
+Total drops:            0
+Drop rate:              0.0
+History size so far:    100
+
+
+LATEST DUMP:
+Error: LatencyError: Number of latency packets received on port-0 is 0
+Error: LatencyError: Number of latency packets received on port-1 is 0
+Error: LatencyError: Number of latency packets received on port-2 is 0
+Error: LatencyError: Number of latency packets received on port-3 is 0
+]]></system-out></testcase></testsuite>

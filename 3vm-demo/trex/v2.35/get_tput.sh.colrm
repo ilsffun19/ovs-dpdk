@@ -1,0 +1,18 @@
+#!/bin/bash
+
+screen=32036.trex
+rm /root/screenlog.1
+rm /tmp/tput
+rm /tmp/mpps
+/usr/bin/screen -S $screen -p 1 -X log
+sleep 5
+/usr/bin/screen -S $screen -p 1 -X stuff "stats --port 0 1^M"
+sleep 5
+/usr/bin/screen -S $screen -p 1 -X log
+echo `cat /root/screenlog.1 | grep "Rx bps" | colrm 1 60 | colrm 3` > /tmp/tput
+echo `cat /root/screenlog.1 | grep "Rx pps" | colrm 1 60 | colrm 3` > /tmp/mpps
+chmod 666 /tmp/mpps
+chmod 666 /tmp/tput
+cat "/tmp/mpps"
+cat "/tmp/tput"
+

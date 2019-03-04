@@ -1,0 +1,5 @@
+#!/bin/bash
+echo "to detach from the trex screen, press Ctrl+b d"
+sleep 5
+cd /opt/trex/v2.35/
+./t-rex-64 -i -c 12 --cfg /etc/trex_cfg-1.yaml

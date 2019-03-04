@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?><testsuite name="nosetests" tests="2" errors="0" failures="0" skip="0"><testcase classname="stateless_tests.stl_general_test.STLBasic_Test" name="test_connectivity" time="0.497"><system-out><![CDATA[Starting TRex... done. (0s)
+Connecting.
+Connected
+Mapping ports.
+Got ports mapping: {'map': {0: 1, 1: 0}, 'bi': [(0, 1)], 'unknown': []}
+]]></system-out></testcase><testcase classname="stateless_tests.stl_rx_test.STLRX_Test" name="test_multiple_streams_random" time="61.632"><system-out><![CDATA[
+num cores 7 num 9k mbufs 20 num 4k mbufs 20
+num_latency_streams:32
+  total percent:1.0 (0.03125 per stream)
+num_flow_stat_streams:92
+  total percent:1.0 (0.0108695652174 per stream)
+Duration: 60
+]]></system-out></testcase></testsuite>

@@ -1,0 +1,7 @@
+Version : v2.30
+DPDK version: DPDK 17.02.0-rc3
+User    : hhaim
+Date    : Sep 24 2017 , 20:16:21
+Uuid    : 13b29c62-a14c-11e7-b03a-0006f62b3e88
+Git SHA : 1510a4a8629d1497c5fc2068e975e9bee9ffb06d
+Server: 10.56.216.133, Modes: ['loopback', 'VM']
