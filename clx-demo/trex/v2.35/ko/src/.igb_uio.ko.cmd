@@ -1,1 +1,0 @@
-cmd_/root/trex/v2.35/ko/src/igb_uio.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /root/trex/v2.35/ko/src/igb_uio.ko /root/trex/v2.35/ko/src/igb_uio.o /root/trex/v2.35/ko/src/igb_uio.mod.o
