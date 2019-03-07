@@ -33,12 +33,12 @@ l3 -p 3 --src 192.4.1.2 --dst 192.4.1.1
 l3 -p 4 --src 192.5.1.2 --dst 192.5.1.1
 l3 -p 5 --src 192.6.1.2 --dst 192.6.1.1
 service -a --off
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p0.yaml --force -p0
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p1.yaml --force -p1
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p2.yaml --force -p2
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p3.yaml --force -p3
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p4.yaml --force -p4
-start -f /root/vpp-vrouter-trex/vpp-vrouter-p5.yaml --force -p5
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p0.yaml --force -p0
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p1.yaml --force -p1
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p2.yaml --force -p2
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p3.yaml --force -p3
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p4.yaml --force -p4
+start -f /opt/vpp-vrouter-trex/vpp-vrouter-p5.yaml --force -p5
 stats -a
 
 To detach the tmux, press <esc> key, then press:
