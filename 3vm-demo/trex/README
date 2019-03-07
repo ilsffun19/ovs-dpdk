@@ -5,9 +5,10 @@ Install TREX as follows:
 4) rmmod uio igb_uio
 5) modprobe uio
 6) insmod /opt/trex/v2.35/ko/src/igb_uio.ko
-7) mv disable_service.sh /root
-8) mv stop_services.sh /root
-9) mv run_trex /root
+7) mv /opt/trex/disable_service.sh /root
+8) mv /opt/trex/stop_services.sh /root
+9) mv /opt/trex/run_trex /root
+10) cp /opt/trex/trex_cfg-6port.yaml /etc
 
 To run trex:
 cd /root
@@ -29,11 +30,15 @@ l3 -p 0 --src 192.1.1.2 --dst 192.1.1.1
 l3 -p 1 --src 192.2.1.2 --dst 192.2.1.1
 l3 -p 2 --src 192.3.1.2 --dst 192.3.1.1
 l3 -p 3 --src 192.4.1.2 --dst 192.4.1.1
+l3 -p 4 --src 192.5.1.2 --dst 192.5.1.1
+l3 -p 5 --src 192.6.1.2 --dst 192.6.1.1
 service -a --off
 start -f /root/vpp-vrouter-trex/vpp-vrouter-p0.yaml --force -p0
 start -f /root/vpp-vrouter-trex/vpp-vrouter-p1.yaml --force -p1
 start -f /root/vpp-vrouter-trex/vpp-vrouter-p2.yaml --force -p2
 start -f /root/vpp-vrouter-trex/vpp-vrouter-p3.yaml --force -p3
+start -f /root/vpp-vrouter-trex/vpp-vrouter-p4.yaml --force -p4
+start -f /root/vpp-vrouter-trex/vpp-vrouter-p5.yaml --force -p5
 stats -a
 
 To detach the tmux, press <esc> key, then press:
