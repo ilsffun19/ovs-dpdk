@@ -5,9 +5,12 @@ Install TREX as follows:
 4) rmmod uio igb_uio
 5) modprobe uio
 6) insmod /opt/trex/v2.35/ko/src/igb_uio.ko
+7) mv disable_service.sh /root
+8) mv stop_services.sh /root
+9) mv run_trex /root
 
-
-
+To run trex:
+cd /root
 tmux new -s trex-server
 ./run_trex
 
@@ -17,6 +20,7 @@ Ctrl+b and then d
 Then, open another tmux by doing:
 tmux new -s trex-console
 
+cd /opt/trex/v2.35
 ./trex-console -f
 porattr
 portattr -a --prom on
