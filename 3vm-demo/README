@@ -31,9 +31,17 @@ login to the VM and then run the following in the VM to start VPP:
 systemctl start vpp
 telnet localhost 5002
 
-vpp# exec /root/vpp-vrouter/vpp-6p.conf
+vpp# exec /root/vpp-vrouter/vpp-2p.conf
 
-Do VM CPU pinning to the host for optimization
+Do VM CPU pinning to the host for optimization.
+Set the core affinity of the VM by doing the following:
+ps -e |grep qemu
+top -p <qemu PID> -d1 -H
+Record the Thread PID which is utilizing ~99% of the core (.e.g thread PID)
+taskset -pc -a 8 <qemu PID>
+taskset -pc 9 <qemu thread PID which show ~99% util>
+taskset -pc 10 <qemu thread PID which shows TIME+ more than 0.58.xx>
+
 
 Setup traffic generator to arp to the VPP and then start traffic.
 
