@@ -10,30 +10,31 @@ power_on_vm-vhost-user-6P.sh - set the correct taskset for the cores the VM will
 
 ./disable_service.sh
 ./stop_services.sh
-cd /root/ovs-dpdk/vpp-vrouter-ovs
+cd /root/ovs-dpdk/3vm-demo
 ./start-ovs-dpdk.sh
 ./set_pmd_thread.sh
 ./createports_pvp-6P-6c12t.sh
 
 cd 3vms
-./power_on_vm-vhost-user-6P.sh
+power_on_vm-vhost-user1-2P.sh
+power_on_vm-vhost-user2-2P.sh
+power_on_vm-vhost-user3-2P.sh
 ./addroutes_pvp-6P-vpp-ip.sh
 
 to connect to the VM:
 from your host, you can login to the VM via:
 ssh -l root localhost -p 2023  (for VM1)
+ssh -l root localhost -p 2024  (for VM2)
+ssh -l root localhost -p 2025  (for VM3)
 
 login to the VM and then run the following in the VM to start VPP:
-
-./disable_service.sh
-./stop_services.sh
 ./setup_huge.sh
 systemctl start vpp
 telnet localhost 5002
 
 vpp# exec /root/vpp-vrouter/vpp-2p.conf
 
-Do VM CPU pinning to the host for optimization.
+Do VM CPU pinning to the host for optimization. You would need to do the following for each qemu VM.
 Set the core affinity of the VM by doing the following:
 ps -e |grep qemu
 top -p <qemu PID> -d1 -H
