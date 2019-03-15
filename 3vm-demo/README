@@ -38,10 +38,40 @@ Do VM CPU pinning to the host for optimization. You would need to do the followi
 Set the core affinity of the VM by doing the following:
 ps -e |grep qemu
 top -p <qemu PID> -d1 -H
-Record the Thread PID which is utilizing ~99% of the core (.e.g thread PID)
-taskset -pc -a 8 <qemu PID>
-taskset -pc 9 <qemu thread PID which show ~99% util>
-taskset -pc 10 <qemu thread PID which shows TIME+ more than 0.58.xx>
+
+For example:
+# ps -e |grep qemu
+71261 pts/0    00:07:13 qemu-system-x86
+71287 pts/0    00:05:04 qemu-system-x86
+71308 pts/0    00:03:46 qemu-system-x86
+
+# top -p 71308 -d1 -H
+  PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND                                                                                               
+71323 root      20   0 9291568  25524  11392 R 53.3  0.0   1:40.47 qemu-system-x86                                                                                       
+71324 root      20   0 9291568  25524  11392 R 46.7  0.0   1:40.38 qemu-system-x86                                                                                       
+71321 root      20   0 9291568  25524  11392 S  6.7  0.0   0:18.61 qemu-system-x86                                                                                       
+71308 root      20   0 9291568  25524  11392 S  0.0  0.0   0:07.67 qemu-system-x86                                                                                       
+71309 root      20   0 9291568  25524  11392 S  0.0  0.0   0:00.00 qemu-system-x86                                                                                       
+71320 root      20   0 9291568  25524  11392 S  0.0  0.0   0:00.01 qemu-system-x86                                                                                       
+71322 root      20   0 9291568  25524  11392 S  0.0  0.0   0:10.66 qemu-system-x86                                                                                       
+71327 root      20   0 9291568  25524  11392 S  0.0  0.0   0:00.00 qemu-system-x86                                                                                       
+
+
+Record the Thread PIDs which are utilizing the highest % of the core (.e.g PID 71323, 71324)
+# taskset -pc -a 71308
+pid 71308's current affinity list: 36-39
+pid 71309's current affinity list: 36-39
+pid 71320's current affinity list: 36-39
+pid 71321's current affinity list: 36-39
+pid 71322's current affinity list: 36-39
+pid 71323's current affinity list: 36-39
+pid 71324's current affinity list: 36-39
+pid 71327's current affinity list: 36-39
+
+taskset -pc -a 36 71308
+taskset -pc 37 71323
+taskset -pc 38 71324
+taskset -pc 39 71321 <qemu thread PID which shows TIME+ the longest after 71323 and 71324>
 
 
 Setup traffic generator to arp to the VPP and then start traffic.
