@@ -1,0 +1,62 @@
+---
+- name: "p0"
+  
+  stream:
+    action_count: 0
+    enabled: true
+    flags: 2
+    flow_stats:
+      enabled: true
+      rule_type: "stats"
+      stream_id: 5
+    isg: 0.0
+    mode:
+      rate:
+        type: "percentage"
+        value: 18.0
+      type: "continuous"
+      total_pkts: 1
+      pkts_per_burst: 1
+      ibg: 0.0
+      count: 1
+    
+    packet:
+      binary: "AAYAAAAGAgAAAAAFCABFAAAuBNIAAH8AgUgEAAAACAAAAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBka"
+      meta: "eyJwcm90b2NvbF9zZWxlY3Rpb24iOnsiZnJhbWVfbGVuZ3RoIjoiNjQiLCJpc190Y3Bfc2VsZWN0ZWQiOmZhbHNlLCJpc19pcHY0X3NlbGVjdGVkIjp0cnVlLCJtYXhfbGVuZ3RoIjoiMTUxOCIsImlzX3VkcF9zZWxlY3RlZCI6ZmFsc2UsIm1pbl9sZW5ndGgiOiI2NCIsImZyYW1lX2xlbmd0aF90eXBlIjoiRml4ZWQiLCJpc190YWdnZWRfdmxhbl9zZWxlY3RlZCI6ZmFsc2UsImlzX3BhdHRlcm5fc2VsZWN0ZWQiOnRydWV9LCJldGhlcm5ldCI6eyJ0eXBlIjoiMDgwMCIsImlzX292ZXJyaWRlIjp0cnVlfSwibWFjIjp7InNvdXJjZSI6eyJhZGRyZXNzIjoiMDI6MDA6MDA6MDA6MDA6MDUiLCJjb3VudCI6IjkwMDAiLCJzdGVwIjoiMSIsIm1vZGUiOiJUUmV4IENvbmZpZyJ9LCJkZXN0aW5hdGlvbiI6eyJhZGRyZXNzIjoiMDA6MDY6MDA6MDA6MDA6MDYiLCJjb3VudCI6IjkwMDAiLCJzdGVwIjoiMSIsIm1vZGUiOiJGaXhlZCJ9fSwiaXB2NCI6eyJzb3VyY2UiOnsiYWRkcmVzcyI6IjQuMC4wLjAiLCJjb3VudCI6IjUwMDAwMCIsInN0ZXAiOiIxIiwibW9kZSI6IkluY3JlbWVudCBIb3N0In0sImRlc3RpbmF0aW9uIjp7ImFkZHJlc3MiOiI4LjAuMC4wIiwiY291bnQiOiI1MDAwMDAiLCJzdGVwIjoiMSIsIm1vZGUiOiJJbmNyZW1lbnQgSG9zdCJ9fSwidGNwIjp7ImlzX292ZXJyaWRlX2RzdF9wb3J0IjpmYWxzZSwiY2hlY2tzdW0iOiJCM0UzIiwidXJnZW50X3BvaW50ZXIiOiIwIiwiaXNfdXJnIjpmYWxzZSwiaXNfYWNrIjpmYWxzZSwiaXNfcHNoIjpmYWxzZSwiaXNfcnN0IjpmYWxzZSwiaXNfc3luYyI6ZmFsc2UsImlzX2ZpbiI6ZmFsc2UsImFja19udW1iZXIiOiIwIiwid2luZG93IjoiMTAyNCIsImlzX292ZXJyaWRlX3NyY19wb3J0IjpmYWxzZSwiaXNfb3ZlcnJpZGVfY2hlY2tzdW0iOmZhbHNlLCJzZXF1ZW5jZV9udW1iZXIiOiIxMjkwMTgiLCJzcmNfcG9ydCI6IjEwMjUiLCJkc3RfcG9ydCI6IjEwMjUifSwidWRwIjp7ImlzX292ZXJyaWRlX2RzdF9wb3J0IjpmYWxzZSwibGVuZ3RoIjoiMjYiLCJjaGVja3N1bSI6IkZGQkEiLCJpc19vdmVycmlkZV9sZW5ndGgiOmZhbHNlLCJpc19vdmVycmlkZV9zcmNfcG9ydCI6ZmFsc2UsImlzX292ZXJyaWRlX2NoZWNrc3VtIjpmYWxzZSwic3JjX3BvcnQiOiIxMDI1IiwiZHN0X3BvcnQiOiIxMDI1In0sInBheWxvYWQiOnsidHlwZSI6IkluY3JlbWVudCBCeXRlIiwicGF0dGVybiI6IjAwIn0sInZsYW4iOnsicHJpb3JpdHkiOiIwIiwiaXNfb3ZlcnJpZGVfdHBfaWQiOmZhbHNlLCJjZmkiOiIwIiwidl9pZCI6IjAiLCJ0cF9pZCI6IkZGRkYifSwiYWR2YW5zZWRfcHJvcGVydGllcyI6eyJjYWNoZV9zaXplX3R5cGUiOiJBdXRvIiwiY2FjaGVfdmFsdWUiOiI1MDAwIn0sIm1vZGVsX3ZlcnNpb24iOiIxLjAifQ=="
+      model: ""
+    self_start: true
+    start_paused: false
+    advanced_mode: false
+    vm:
+      split_by_var: "ip_src"
+      instructions:
+      - init_value: 134217728
+        min_value: 134217728
+        max_value: 134717727
+        name: "ip_dest"
+        op: "inc"
+        size: 4
+        step: 1
+        type: "flow_var"
+      - add_value: 0
+        is_big_endian: true
+        name: "ip_dest"
+        pkt_offset: 30
+        type: "write_flow_var"
+      - init_value: 67108864
+        min_value: 67108864
+        max_value: 67608863
+        name: "ip_src"
+        op: "inc"
+        size: 4
+        step: 1
+        type: "flow_var"
+      - add_value: 0
+        is_big_endian: true
+        name: "ip_src"
+        pkt_offset: 26
+        type: "write_flow_var"
+      - pkt_offset: 14
+        type: "fix_checksum_ipv4"
+      cache_size: 5000
+  stream_id: 0
