@@ -1,0 +1,36 @@
+- port_limit            : 4             # Number of ports
+  version               : 2.53          # Version of TRex
+  interfaces            : ["18:00.0","18:00.1","1a:00.0","1a:00.1"]
+
+  enable_zmq_pub        : true          # enable publisher for stats data
+  limit_memory          : 8192
+  c                     : 4             # Number of threads (cores) TRex will use per interface pair
+  port_bandwidth_gb     : 25            # port bandwidth 25Gb/sec , for VM put here 1 for XL710 put 40
+
+  memory                :
+     mbuf_64            : 16380         # Numbers of memory buffers allocated for packets in transit, per port pair. Numbers are specified per packet size
+     mbuf_128           : 8190
+     mbuf_256           : 8190
+     mbuf_512           : 8190
+     mbuf_1024          : 8190
+     mbuf_2048          : 4096
+     
+     traffic_mbuf_64    : 16380         # Numbers of memory buffers allocated for holding the part of the packet which is remained unchanged per template. You should increase numbers here, only if you have very large amount of templates.
+     traffic_mbuf_128   : 8190
+     traffic_mbuf_256   : 8190
+     traffic_mbuf_512   : 8190
+     traffic_mbuf_1024  : 8190
+     traffic_mbuf_2048  : 4096
+     
+     dp_flows           : 1048576       # Number of TRex flow objects allocated (To get best performance they are allocated upfront, and not dynamically). If you expect more concurrent flows than the default (1048576), enlarge this.
+     global_flows       : 10240         # Number objects TRex allocates for holding NAT in transit connections. Again, default here (10240) should be good. Increase only if you use NAT and see issues.
+
+  platform              :
+     master_thread_id   : 1             # Hardware thread_id for control thread
+     latency_thread_id  : 15            # Hardware thread_id for RX thread
+     dual_if            :               # dual_if section defines info for interface pairs (according to the order in interfaces list). each section, starting with - socket defines info for different interface pair.
+     - socket           : 0             # The NUMA node from which memory will be allocated for use by the interface pair.
+       threads          : [2,3,4,5]     # Hardware threads to be used for sending packets for the interface pair. Threads are pinned to cores, so specifying threads actually determines the hardware cores.
+     - socket           : 0             # The NUMA node from which memory will be allocated for use by the interface pair.
+       threads          : [6,7,8,9]     # Hardware threads to be used for sending packets for the interface pair. Threads are pinned to cores, so specifying threads actually determines the hardware cores.
+
