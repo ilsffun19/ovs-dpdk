@@ -28,20 +28,20 @@ physical ports with 2 vhost-user interfaces.
 6) To check the OVS PMD core assignment, run check_pmd_cores.sh
 7) To change the OVS PMD core assignment for the dpdk and vhost-user
 interfaces, run set_rxq.sh
-8) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
+8)On the host, run addroutes_pvp-2p.sh to setup the flow 
+9) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
 Create vm-images folder in ovs-dpdk. Pls download the ubuntu-16.04-testpmd.img file to ovs-dpdk/vm-images folder.
-9) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
-10) Run power_on_vm-vhost-user1-2p.sh to power on the VM
-11) Run vncviewer <host address>:1 to access to the VM
-12) Once VM is booted, you would be able to remote access to the VM from the
+10) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
+11) Run power_on_vm-vhost-user1-2p.sh to power on the VM
+12) Run vncviewer <host address>:1 to access to the VM
+13) Once VM is booted, you would be able to remote access to the VM from the
 host via ssh -l root localhost -p 2024
-13) Credential of the VM is: root/passme123
-14) Run run_testpmd.sh in the VM to start testpmd
-15) Once testpmd is running, type:
+14) Credential of the VM is: root/passme123
+15) Run run_testpmd.sh in the VM to start testpmd
+16) Once testpmd is running, type:
 set fwd mac
 start
 
-16) Back in the host, run addroutes_pvp-2p.sh to setup the flow 
 17) Generate traffic from the traffic generator
 
 
@@ -52,21 +52,21 @@ interfaces
 6) To check the OVS PMD core assignment, run check_pmd_cores.sh
 7) To change the OVS PMD core assignment for the dpdk and vhost-user
 interfaces, run set_rxq.sh $interface_name $core_id
-8) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
+8)On the host, run addroutes_pvvp-2p.sh to setup the flow
+9) Download the VM image at: https://drive.google.com/file/d/1zoyF7KD594fr-1SBdDMgxR9P1fKJ23NJ/view?usp=sharing
 Create vm-images folder in ovs-dpdk. Pls download the ubuntu-16.04-testpmd.img file to ovs-dpdk/vm-images folder. Duplicate another ubuntu-16.04-testpmd.img file and rename to ubuntu-16.04-testpmd2.img.
-9) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
-10) Run power_on_vm-vhost-user1-2p.sh to power on the VM1 and power_on_vm-vhost-user2-2p.sh to power on VM2.
-11) Run vncviewer <host address>:1 and vncviewer <host address>:2 to access to VM1 and VM2
-12) Once both VMs are booted, you would be able to remote the access to the VMs from the host via:
+10) Edit the power_on_vm-vhost-user1-2p.sh to make sure all the info is correct.
+11) Run power_on_vm-vhost-user1-2p.sh to power on the VM1 and power_on_vm-vhost-user2-2p.sh to power on VM2.
+12) Run vncviewer <host address>:1 and vncviewer <host address>:2 to access to VM1 and VM2
+13) Once both VMs are booted, you would be able to remote the access to the VMs from the host via:
 ssh -l root localhost -p 2024
 ssh -l root localhost -p 2025
-13) Credential of the VMs are: root/passme123
-14) Run run_testpmd.sh in the VM to start DPDK testpmd
-15) Once testpmd is running, type:
+14) Credential of the VMs are: root/passme123
+15) Run run_testpmd.sh in the VM to start DPDK testpmd
+16) Once testpmd is running, type:
 set fwd mac
 start
 
-16) Back in the host, run addroutes_pvvp-2p.sh to setup the flow
 17) Generate traffic from the traffic generator
 
 
