@@ -17,6 +17,8 @@ to bind to OVS-DPDK. In the same file, check where is your PCI devices located
 (either in socket 0 or socket 1), and then edit the core assignment of the
 ovs-vswitchd. By default, it has been set to core 1 (in socket 0). Save the
 file.
+Save the start-ovs-dpdk.sh file and then run start-ovs-dpdk.sh to start OVS-DPDK.
+Then run set_pmd_threads.sh
 
 
 To run Phy-VM-Phy (PVP):
